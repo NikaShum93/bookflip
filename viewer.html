@@ -8,68 +8,42 @@
 <style>
   html,body{height:100%;margin:0;background:#000}
   .wrap{position:fixed;inset:0;display:grid;place-items:center}
-  /* Контейнер книги под размер iframe Genially */
   .book{position:relative;width:min(96vw, 1200px);height:min(90vh, 800px)}
   #flip{position:absolute;inset:0}
-
-  /* Оформление страниц: каждая страница = ОДНО изображение */
-  .gpage{
-    width:100%;height:100%;
-    display:grid;place-items:stretch;
-    background:#111; /* подложка пока грузится */
-    border:0;
-  }
+  .gpage{width:100%;height:100%;display:grid;place-items:stretch;background:#111}
   .gpage .full{
     width:100%;height:100%;
-    background-repeat:no-repeat;
-    background-position:center center;
-    background-size:cover;         /* картинка целиком на страницу */
-    border:2px solid #555;         /* рамка страницы */
-    box-sizing:border-box;
-    backface-visibility:hidden;
-    transform:translateZ(0.1px);   /* избавляет от «швов» */
-    border-radius:2px;
+    background-repeat:no-repeat;background-position:center center;background-size:cover;
+    border:2px solid #555;box-sizing:border-box;backface-visibility:hidden;transform:translateZ(0.1px);border-radius:2px;
   }
-  /* лёгкий наклон «почти прямо» — управляется параметром tilt */
-  .tilt{ transform-style:preserve-3d; }
-
-  /* тень от книги */
-  .book::after{
-    content:""; position:absolute; left:10%; right:10%; bottom:-8%;
-    height:26px; border-radius:50%;
-    box-shadow:0 18px 28px rgba(0,0,0,.26);
-    pointer-events:none;
-  }
+  .book::after{content:"";position:absolute;left:10%;right:10%;bottom:-8%;height:26px;border-radius:50%;box-shadow:0 18px 28px rgba(0,0,0,.26);pointer-events:none;}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="book"><div id="flip"></div></div>
-</div>
-
+<div class="wrap"><div class="book"><div id="flip"></div></div></div>
 <script src="https://unpkg.com/page-flip/dist/js/page-flip.browser.min.js"></script>
 <script>
 (function(){
-  // === чтение параметров ===
   const q = new URLSearchParams(location.search);
-  const imgs = (q.get('imgs')||'').split(',').map(s=>s.trim()).filter(Boolean);
-  const flipTime = +(q.get('flipTime')||800);
-  const tilt = +((q.get('tilt')||'2'));
-  const sfxUrl = (q.get('sfx')||'').trim();   // вставь в editor.html любой CC0 mp3
+
+  // принимаем imgs, где элементы закодированы и разделены '|'
+  const raw = (q.get('imgs')||'').split('|').map(s=>decodeURIComponent(s)).filter(Boolean);
+
+  const flipTime = Number((q.get('flipTime')||'')).valueOf() || 800;
+  const tilt     = Number((q.get('tilt')||'').replace(',', '.')) || 2;
+  const sfxUrl   = (q.get('sfx')||'').trim();
   const showHint = (q.get('showHint')||'false') === 'true';
 
-  // запасные картинки, если ничего не передали (для теста)
   const fallbacks = [
     "https://images.unsplash.com/photo-1514511542842-209a87b229c6?q=80&w=1200&auto=format&fit=crop",
     "https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?q=80&w=1200&auto=format&fit=crop",
     "https://images.unsplash.com/photo-1529336953121-adb2f3f1c6b6?q=80&w=1200&auto=format&fit=crop"
   ];
-  const pages = imgs.length ? imgs : fallbacks;
+  const pages = raw.length ? raw : fallbacks;
 
-  // строим DOM страниц: каждая страница = одно изображение
   const pageEls = pages.map(src=>{
     const p = document.createElement('div');
-    p.className = 'gpage tilt';
+    p.className = 'gpage';
     const inner = document.createElement('div');
     inner.className = 'full';
     inner.style.backgroundImage = `url("${src}")`;
@@ -78,23 +52,20 @@
     return p;
   });
 
-  // размеры "страницы" для StPageFlip (а не разворота)
   const flipRoot = document.getElementById('flip');
   const rect = flipRoot.getBoundingClientRect();
-  // используем текущий размер контейнера iframe
-  let pageWidth  = Math.max(220, Math.floor(rect.width  / 2)); // одна страница ~ половина книги
+  let pageWidth  = Math.max(220, Math.floor(rect.width  / 2));
   let pageHeight = Math.max(220, Math.floor(rect.height));
 
-  // инициализация StPageFlip
   const pf = new St.PageFlip(flipRoot, {
     width: pageWidth,
     height: pageHeight,
-    size: 'stretch',             // тянем под контейнер
+    size: 'stretch',
     minWidth: 180, minHeight: 180,
     maxShadowOpacity: 0.25,
-    flippingTime: flipTime,      // плавность
+    flippingTime: flipTime,
     showHint: showHint,
-    usePortrait: false,          // двухстраничный разворот
+    usePortrait: false,
     autoSize: true,
     clickEventForward: true,
     mobileScrollSupport: true,
@@ -103,29 +74,23 @@
 
   pf.loadFromHtml(pageEls);
 
-  // звук перелистывания
+  // звук
   let sfx = null;
-  if (sfxUrl) {
-    try {
-      sfx = new Audio(sfxUrl);
-      sfx.preload = 'auto';
-    } catch(e){ sfx = null; }
-  }
+  if (sfxUrl) { try { sfx = new Audio(sfxUrl); sfx.preload='auto'; } catch(e){} }
   function playFlipSound(){
     if (!sfx) return;
-    // попытка воспроизведения по событию flip (пользователь уже кликал/свайпал)
     sfx.currentTime = 0;
-    sfx.play().catch(()=>{/* браузер мог заблокировать до первого взаимодействия */});
+    sfx.play().catch(()=>{});
   }
   pf.on('flip', playFlipSound);
 
-  // управление стрелками
-  window.addEventListener('keydown', (e)=>{
-    if (e.key === 'ArrowRight') { pf.flipNext('bottom'); }
-    else if (e.key === 'ArrowLeft') { pf.flipPrev('bottom'); }
+  // клавиши
+  window.addEventListener('keydown',(e)=>{
+    if (e.key === 'ArrowRight') pf.flipNext('bottom');
+    else if (e.key === 'ArrowLeft') pf.flipPrev('bottom');
   });
 
-  // адаптация при изменении iframe
+  // ресайз
   window.addEventListener('resize', ()=>{
     const r = flipRoot.getBoundingClientRect();
     pf.update({ width: Math.max(220, Math.floor(r.width/2)), height: Math.max(220, Math.floor(r.height)) });
