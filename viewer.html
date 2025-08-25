@@ -3,34 +3,65 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>PageFlip Viewer (single-image pages)</title>
+<title>PageFlip Viewer (single-image pages, robust)</title>
 <link rel="stylesheet" href="https://unpkg.com/page-flip/dist/css/page-flip.min.css">
 <style>
   html,body{height:100%;margin:0;background:#000}
   .wrap{position:fixed;inset:0;display:grid;place-items:center}
   .book{position:relative;width:min(96vw, 1200px);height:min(90vh, 800px)}
   #flip{position:absolute;inset:0}
+
   .gpage{width:100%;height:100%;display:grid;place-items:stretch;background:#111}
   .gpage .full{
     width:100%;height:100%;
     background-repeat:no-repeat;background-position:center center;background-size:cover;
-    border:2px solid #555;box-sizing:border-box;backface-visibility:hidden;transform:translateZ(0.1px);border-radius:2px;
+    border:2px solid #555;box-sizing:border-box;backface-visibility:hidden;
+    transform:translateZ(0.1px);border-radius:2px;
   }
-  .book::after{content:"";position:absolute;left:10%;right:10%;bottom:-8%;height:26px;border-radius:50%;box-shadow:0 18px 28px rgba(0,0,0,.26);pointer-events:none;}
+
+  /* оверлей состояния/ошибок */
+  .overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+    background:rgba(0,0,0,.6);color:#fff;font:14px/1.4 system-ui,Segoe UI,Roboto,Arial;z-index:9999}
+  .overlay .panel{background:#121212;border:1px solid #333;border-radius:12px;padding:16px 18px;max-width:720px}
+  .overlay .panel b{color:#ffd27d}
+  .overlay .list{max-height:220px;overflow:auto;margin-top:8px;font-family:ui-monospace,Consolas,monospace;font-size:12px}
+  .hidden{display:none}
 </style>
 </head>
 <body>
-<div class="wrap"><div class="book"><div id="flip"></div></div></div>
+<div class="wrap">
+  <div class="book"><div id="flip"></div></div>
+</div>
+
+<div id="ovl" class="overlay hidden"><div class="panel">
+  <div id="ovlTitle">Загрузка…</div>
+  <div id="ovlBody" class="list"></div>
+</div></div>
+
 <script src="https://unpkg.com/page-flip/dist/js/page-flip.browser.min.js"></script>
 <script>
 (function(){
+  const ovl = document.getElementById('ovl');
+  const t = document.getElementById('ovlTitle');
+  const b = document.getElementById('ovlBody');
+  function show(msg, list){
+    t.textContent = msg;
+    b.innerHTML = (list||[]).map(x=>`<div>${x}</div>`).join('');
+    ovl.classList.remove('hidden');
+  }
+  function hide(){ ovl.classList.add('hidden'); }
+
+  // --- читаем параметры ---
   const q = new URLSearchParams(location.search);
 
-  // принимаем imgs, где элементы закодированы и разделены '|'
-  const raw = (q.get('imgs')||'').split('|').map(s=>decodeURIComponent(s)).filter(Boolean);
+  // imgs: поддерживаем и '|' (из редактора), и ',' (если руками)
+  const rawImgs = (q.get('imgs')||'').split(/[|,]/)
+      .map(s=>s.trim())
+      .filter(Boolean)
+      .map(s=>{ try { return decodeURIComponent(s); } catch { return s; } });
 
-  const flipTime = Number((q.get('flipTime')||'')).valueOf() || 800;
-  const tilt     = Number((q.get('tilt')||'').replace(',', '.')) || 2;
+  const flipTime = Number(String(q.get('flipTime')||'').replace(',', '.')) || 800;
+  const tilt     = Number(String(q.get('tilt')||'').replace(',', '.')) || 2;
   const sfxUrl   = (q.get('sfx')||'').trim();
   const showHint = (q.get('showHint')||'false') === 'true';
 
@@ -39,62 +70,101 @@
     "https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?q=80&w=1200&auto=format&fit=crop",
     "https://images.unsplash.com/photo-1529336953121-adb2f3f1c6b6?q=80&w=1200&auto=format&fit=crop"
   ];
-  const pages = raw.length ? raw : fallbacks;
+  const pages = rawImgs.length ? rawImgs : fallbacks;
 
-  const pageEls = pages.map(src=>{
-    const p = document.createElement('div');
-    p.className = 'gpage';
-    const inner = document.createElement('div');
-    inner.className = 'full';
-    inner.style.backgroundImage = `url("${src}")`;
-    inner.style.transform = `rotateX(${tilt}deg) translateZ(0.1px)`;
-    p.appendChild(inner);
-    return p;
+  // --- предзагрузка изображений с диагностикой ---
+  show('Загружаю изображения…');
+  const errs = [];
+  const promises = pages.map((src, i)=>new Promise((resolve)=>{
+    const im = new Image();
+    im.onload = ()=>resolve({ok:true, src});
+    im.onerror = ()=>resolve({ok:false, src});
+    // иногда хосты требуют no-referrer; оставим по умолчанию
+    im.src = src;
+  }));
+
+  Promise.all(promises).then(results=>{
+    const bad = results.filter(r=>!r.ok).map(r=>r.src);
+    if (bad.length){
+      show('Не удалось загрузить часть изображений. Проверь прямые URL:', bad);
+      // продолжаем только с рабочими
+    }
+    const okUrls = results.filter(r=>r.ok).map(r=>r.src);
+    if (!okUrls.length){
+      show('Нет ни одного доступного изображения. Проверь ссылки.');
+      return;
+    }
+    init(okUrls);
+  }).catch(e=>{
+    show('Ошибка при загрузке: ' + (e&&e.message ? e.message : e));
   });
 
-  const flipRoot = document.getElementById('flip');
-  const rect = flipRoot.getBoundingClientRect();
-  let pageWidth  = Math.max(220, Math.floor(rect.width  / 2));
-  let pageHeight = Math.max(220, Math.floor(rect.height));
+  function init(imgUrls){
+    try{
+      // строим DOM страниц
+      const pageEls = imgUrls.map(src=>{
+        const p = document.createElement('div');
+        p.className = 'gpage';
+        const inner = document.createElement('div');
+        inner.className = 'full';
+        inner.style.backgroundImage = `url("${src}")`;
+        inner.style.transform = `rotateX(${tilt}deg) translateZ(0.1px)`;
+        p.appendChild(inner);
+        return p;
+      });
 
-  const pf = new St.PageFlip(flipRoot, {
-    width: pageWidth,
-    height: pageHeight,
-    size: 'stretch',
-    minWidth: 180, minHeight: 180,
-    maxShadowOpacity: 0.25,
-    flippingTime: flipTime,
-    showHint: showHint,
-    usePortrait: false,
-    autoSize: true,
-    clickEventForward: true,
-    mobileScrollSupport: true,
-    drawShadow: true
-  });
+      const flipRoot = document.getElementById('flip');
+      const rect = flipRoot.getBoundingClientRect();
+      let pageWidth  = Math.max(220, Math.floor((rect.width||800) / 2));
+      let pageHeight = Math.max(220, Math.floor(rect.height||600));
 
-  pf.loadFromHtml(pageEls);
+      const pf = new St.PageFlip(flipRoot, {
+        width: pageWidth,
+        height: pageHeight,
+        size: 'stretch',
+        minWidth: 180, minHeight: 180,
+        maxShadowOpacity: 0.25,
+        flippingTime: flipTime,
+        showHint: showHint,
+        usePortrait: false,
+        autoSize: true,
+        clickEventForward: true,
+        mobileScrollSupport: true,
+        drawShadow: true
+      });
 
-  // звук
-  let sfx = null;
-  if (sfxUrl) { try { sfx = new Audio(sfxUrl); sfx.preload='auto'; } catch(e){} }
-  function playFlipSound(){
-    if (!sfx) return;
-    sfx.currentTime = 0;
-    sfx.play().catch(()=>{});
+      pf.loadFromHtml(pageEls);
+
+      // звук
+      let sfx = null;
+      if (sfxUrl) { try { sfx = new Audio(sfxUrl); sfx.preload='auto'; } catch(e){} }
+      pf.on('flip', ()=>{
+        if (sfx){
+          sfx.currentTime = 0;
+          sfx.play().catch(()=>{});
+        }
+      });
+
+      // клавиши ← →
+      window.addEventListener('keydown',(e)=>{
+        if (e.key === 'ArrowRight') pf.flipNext('bottom');
+        else if (e.key === 'ArrowLeft') pf.flipPrev('bottom');
+      });
+
+      // ресайз
+      window.addEventListener('resize', ()=>{
+        const r = flipRoot.getBoundingClientRect();
+        pf.update({
+          width:  Math.max(220, Math.floor((r.width||800)/2)),
+          height: Math.max(220, Math.floor(r.height||600))
+        });
+      });
+
+      hide();
+    } catch(e){
+      show('Ошибка инициализации книги: ' + (e&&e.message ? e.message : e));
+    }
   }
-  pf.on('flip', playFlipSound);
-
-  // клавиши
-  window.addEventListener('keydown',(e)=>{
-    if (e.key === 'ArrowRight') pf.flipNext('bottom');
-    else if (e.key === 'ArrowLeft') pf.flipPrev('bottom');
-  });
-
-  // ресайз
-  window.addEventListener('resize', ()=>{
-    const r = flipRoot.getBoundingClientRect();
-    pf.update({ width: Math.max(220, Math.floor(r.width/2)), height: Math.max(220, Math.floor(r.height)) });
-  });
 })();
 </script>
 </body>
