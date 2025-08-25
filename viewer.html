@@ -10,17 +10,61 @@
 <noscript><link rel="stylesheet" href="https://unpkg.com/page-flip@2.0.7/dist/css/page-flip.min.css"></noscript>
 
 <style>
+  :root{
+    /* регулировка интенсивности теней (0–1.0) */
+    --depth: .35;
+    --edge:  .22;
+  }
   html,body{height:100%;margin:0;background:transparent}
   .wrap{position:fixed;inset:0;display:grid;place-items:center;background:transparent}
   .book{position:relative;width:min(96vw,1200px);height:min(90vh,800px);background:transparent}
   #flip{position:absolute;inset:0;background:transparent}
 
-  .overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
-    background:rgba(0,0,0,.25);color:#fff;font:14px/1.4 system-ui,Segoe UI,Roboto,Arial;z-index:9999}
-  .overlay .panel{background:#121212;border:1px solid #333;border-radius:12px;padding:16px 18px;max-width:720px}
-  .overlay .list{max-height:220px;overflow:auto;margin-top:8px;font-family:ui-monospace,Consolas,monospace;font-size:12px}
-  .hidden{display:none}
+  /* ===== объёмные тени ===== */
+  /* внешняя мягкая тень под книгой */
+  .book::after{
+    content:""; position:absolute; left:6%; right:6%; bottom:-12px; height:28px;
+    filter: blur(10px);
+    background:
+      radial-gradient(60% 100% at 50% 0%,
+        rgba(0,0,0,calc(.9*var(--depth))) 0%,
+        rgba(0,0,0,0) 70%);
+    pointer-events:none;
+  }
+  /* корешок (внутренняя тень по центру) */
+  #flip::before{
+    content:""; position:absolute; top:2.5%; bottom:2.5%; left:50%; width:56px; transform:translateX(-50%);
+    pointer-events:none;
+    background:
+      linear-gradient(90deg,
+        rgba(0,0,0,0) 0%,
+        rgba(0,0,0,calc(.85*var(--depth))) 50%,
+        rgba(0,0,0,0) 100%);
+    filter: blur(10px);
+    opacity:.9;
+  }
+  /* лёгкая виньетка по внешним краям страниц */
+  .stf__item::after{
+    content:""; position:absolute; inset:0; pointer-events:none; mix-blend-mode:multiply;
+    background:
+      linear-gradient(90deg,
+        rgba(0,0,0,calc(var(--edge))) 0%,
+        rgba(0,0,0,0) 18%,
+        rgba(0,0,0,0) 82%,
+        rgba(0,0,0,calc(var(--edge))) 100%);
+  }
+  /* при сгибе добавим чуть больше контраста у активной */
+  .stf__item--active::after{
+    background:
+      linear-gradient(90deg,
+        rgba(0,0,0,calc(1.4*var(--edge))) 0%,
+        rgba(0,0,0,0) 18%,
+        rgba(0,0,0,0) 82%,
+        rgba(0,0,0,calc(1.4*var(--edge))) 100%);
+  }
+  /* ================================= */
 </style>
+
 </head>
 <body>
 <div class="wrap">
