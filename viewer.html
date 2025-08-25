@@ -5,25 +5,24 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>PageFlip Viewer (robust loader)</title>
 
-<!-- CSS из двух CDN (основной + запасной) -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/css/page-flip.min.css">
-<noscript>
-  <link rel="stylesheet" href="https://unpkg.com/page-flip@2.0.7/dist/css/page-flip.min.css">
-</noscript>
+<noscript><link rel="stylesheet" href="https://unpkg.com/page-flip@2.0.7/dist/css/page-flip.min.css"></noscript>
 
 <style>
   html,body{height:100%;margin:0;background:#000}
   .wrap{position:fixed;inset:0;display:grid;place-items:center}
   .book{position:relative;width:min(96vw, 1200px);height:min(90vh, 800px)}
   #flip{position:absolute;inset:0}
-  .gpage{width:100%;height:100%;display:grid;place-items:stretch;background:#111}
-  .gpage .full{
+
+  /* каждая страница = один элемент .page */
+  .page{width:100%;height:100%;display:grid;place-items:stretch;background:#111}
+  .page .full{
     width:100%;height:100%;
     background-repeat:no-repeat;background-position:center center;background-size:cover;
     border:2px solid #555;box-sizing:border-box;backface-visibility:hidden;
     transform:translateZ(0.1px);border-radius:2px;
   }
-  /* оверлей статуса/ошибок */
+
   .overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
     background:rgba(0,0,0,.6);color:#fff;font:14px/1.4 system-ui,Segoe UI,Roboto,Arial;z-index:9999}
   .overlay .panel{background:#121212;border:1px solid #333;border-radius:12px;padding:16px 18px;max-width:720px}
@@ -47,14 +46,10 @@
   const ovl = document.getElementById('ovl');
   const t = document.getElementById('ovlTitle');
   const b = document.getElementById('ovlBody');
-  function show(msg, list){
-    t.textContent = msg;
-    b.innerHTML = (list||[]).map(x=>`<div>${x}</div>`).join('');
-    ovl.classList.remove('hidden');
-  }
-  function hide(){ ovl.classList.add('hidden'); }
+  const show = (msg, list)=>{ t.textContent=msg; b.innerHTML=(list||[]).map(x=>`<div>${x}</div>`).join(''); ovl.classList.remove('hidden'); };
+  const hide = ()=>ovl.classList.add('hidden');
 
-  // === Параметры из URL ===
+  // параметры
   const q = new URLSearchParams(location.search);
   const rawImgs = (q.get('imgs')||'').split(/[|,]/).map(s=>s.trim()).filter(Boolean).map(s=>{try{return decodeURIComponent(s)}catch{return s}});
   const flipTime = Number(String(q.get('flipTime')||'').replace(',', '.')) || 800;
@@ -69,49 +64,35 @@
   ];
   const pages = rawImgs.length ? rawImgs : fallbacks;
 
-  // === Предзагрузка изображений (и диагностика битых URL) ===
+  // предзагрузка картинок
   show('Загружаю изображения…');
-  const promises = pages.map(src=>new Promise(res=>{
-    const im=new Image();
-    im.onload = ()=>res({ok:true,src});
-    im.onerror= ()=>res({ok:false,src});
-    im.src = src;
-  }));
-
-  // === Динамическая загрузка StPageFlip c гарантией onload ===
-  function loadScript(src){ return new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; s.onload=()=>res(); s.onerror=()=>rej(new Error('Не удалось загрузить '+src)); document.head.appendChild(s); }); }
-
-  Promise.all(promises).then(results=>{
-    const bad = results.filter(r=>!r.ok).map(r=>r.src);
-    const ok  = results.filter(r=>r.ok).map(r=>r.src);
+  const preload = src => new Promise(res=>{ const im=new Image(); im.onload=()=>res({ok:true,src}); im.onerror=()=>res({ok:false,src}); im.src=src; });
+  Promise.all(pages.map(preload)).then(rs=>{
+    const bad = rs.filter(r=>!r.ok).map(r=>r.src);
+    const ok  = rs.filter(r=>r.ok).map(r=>r.src);
     if (!ok.length){ show('Нет ни одного доступного изображения. Проверь ссылки.'); return; }
     if (bad.length){ show('Часть изображений не загрузилась. Остальные откроются.', bad); }
-    // Загружаем библиотеку: сначала jsDelivr, если не вышло — unpkg
-    show('Загружаю движок перелистывания…');
     return loadScript('https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.min.js')
       .catch(()=>loadScript('https://unpkg.com/page-flip@2.0.7/dist/js/page-flip.browser.min.js'))
       .then(()=>ok);
   }).then(okUrls=>{
-    if (!okUrls) return; // уже показали ошибку
-    // проверяем, что глобаль есть
-    if (!(window.St && window.St.PageFlip)){
-      show('Ошибка инициализации книги: St is not defined');
-      return;
-    }
+    if (!okUrls) return;
+    if (!(window.St && window.St.PageFlip)){ show('Ошибка инициализации книги: St is not defined'); return; }
     init(okUrls);
-  }).catch(e=>{
-    show('Ошибка: ' + (e && e.message ? e.message : e));
-  });
+  }).catch(e=>show('Ошибка: '+(e&&e.message?e.message:e)));
+
+  function loadScript(src){ return new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; s.onload=()=>res(); s.onerror=()=>rej(new Error('Не удалось загрузить '+src)); document.head.appendChild(s); }); }
 
   function init(imgUrls){
     try{
-      // строим DOM страниц (каждая страница — одно изображение)
+      // создаём HTML-страницы (класс .page)
       const pageEls = imgUrls.map(src=>{
-        const p = document.createElement('div'); p.className='gpage';
+        const p = document.createElement('div'); p.className='page';
         const inner = document.createElement('div'); inner.className='full';
         inner.style.backgroundImage = `url("${src}")`;
         inner.style.transform = `rotateX(${tilt}deg) translateZ(0.1px)`;
-        p.appendChild(inner); return p;
+        p.appendChild(inner);
+        return p;
       });
 
       const flipRoot = document.getElementById('flip');
@@ -134,7 +115,14 @@
         drawShadow: true
       });
 
-      pf.loadFromHtml(pageEls);
+      // правильный метод — loadFromHTML (с заглавными)
+      if (typeof pf.loadFromHTML === 'function') {
+        pf.loadFromHTML(pageEls);
+      } else if (typeof pf.loadFromImages === 'function') {
+        pf.loadFromImages(imgUrls);
+      } else {
+        throw new Error('Нет подходящего метода загрузки страниц');
+      }
 
       // звук
       let sfx=null; if (sfxUrl){ try{ sfx=new Audio(sfxUrl); sfx.preload='auto'; }catch(e){} }
