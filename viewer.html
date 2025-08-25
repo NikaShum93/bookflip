@@ -8,36 +8,29 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/css/page-flip.min.css">
 
 <style>
-  :root{ --depth:.35; --edge:.22; }
+  :root{ --edge:.18; }
   html,body{
     margin:0; padding:0; width:100%; height:100%;
     overflow:hidden; background:transparent;
   }
-  #book { position:absolute; inset:0; background:transparent; }
+  #book{ position:absolute; inset:0; background:transparent; }
 
-  /* лёгкие тени, не выходят за пределы iframe */
-  #book::before{
-    content:""; position:absolute; top:2.5%; bottom:2.5%; left:50%; width:56px; transform:translateX(-50%);
-    background:linear-gradient(90deg, rgba(0,0,0,0) 0%,
-      rgba(0,0,0,calc(.85*var(--depth))) 50%, rgba(0,0,0,0) 100%);
-    filter:blur(10px); opacity:.9; pointer-events:none;
-  }
-  #book.single::before{ display:none; } /* на обложке/последней — без корешка */
-
+  /* лёгкая боковая виньетка у страниц (можно удалить, не влияет на центр) */
   .stf__item::after{
     content:""; position:absolute; inset:0; pointer-events:none; mix-blend-mode:multiply;
     background:linear-gradient(90deg,
-      rgba(0,0,0,calc(var(--edge))) 0%,
+      rgba(0,0,0,var(--edge)) 0%,
       rgba(0,0,0,0) 18%,
       rgba(0,0,0,0) 82%,
-      rgba(0,0,0,calc(var(--edge))) 100%);
+      rgba(0,0,0,var(--edge)) 100%);
   }
 
-  /* страница-обёртка: картинка вписывается без растягивания */
+  /* каждая страница — целая картинка; без растяжек по контейнеру */
   .page{ display:grid; place-items:center; width:100%; height:100%; background:transparent; }
   .page img{
-    width:100%; height:100%; object-fit:contain; display:block;
-    user-select:none; -webkit-user-drag:none;
+    width:100%; height:100%;
+    object-fit:cover;        /* заполняет страницу, без белых полей */
+    display:block; user-select:none; -webkit-user-drag:none;
   }
 
   /* оверлей только для ошибок */
@@ -61,7 +54,6 @@
 <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.min.js"></script>
 <script>
 (function(){
-  // ===== helpers =====
   const bookEl = document.getElementById('book');
   const ovl = document.getElementById('ovl');
   const t = document.getElementById('ovlTitle');
@@ -69,14 +61,10 @@
   const showError = (msg, list)=>{ t.textContent=msg; b.innerHTML=(list||[]).map(s=>`<div>${s}</div>`).join(''); ovl.classList.add('show'); };
   const hideError = ()=>ovl.classList.remove('show');
 
-  // ===== читаем параметры (ИМЕННО imgs) =====
+  // берём твой параметр imgs (поддержка | и ,)
   const q = new URLSearchParams(location.search);
-  // поддерживаем и '|' и ',' как разделители + decodeURIComponent на каждом элементе
-  const urls = (q.get('imgs')||'').split(/[|,]/)
-    .map(s=>s.trim()).filter(Boolean)
-    .map(s=>{ try { return decodeURIComponent(s); } catch { return s; } });
+  const urls = (q.get('imgs')||'').split(/[|,]/).map(s=>s.trim()).filter(Boolean).map(s=>{try{return decodeURIComponent(s)}catch{return s}});
 
-  // запасной набор, если ничего не передали
   const fallbacks = [
     "https://images.unsplash.com/photo-1514511542842-209a87b229c6?q=80&w=1200&auto=format&fit=crop",
     "https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?q=80&w=1200&auto=format&fit=crop",
@@ -84,82 +72,60 @@
   ];
   const pages = urls.length ? urls : fallbacks;
 
-  // ===== предзагрузка изображений (без надписи «загрузка») =====
+  // предзагрузка
   Promise.all(pages.map(src=>new Promise(res=>{
-    const im=new Image();
-    im.onload = ()=>res({ok:true,src});
-    im.onerror= ()=>res({ok:false,src});
-    im.src = src;
+    const im=new Image(); im.onload=()=>res({ok:true,src}); im.onerror=()=>res({ok:false,src}); im.src=src;
   }))).then(rs=>{
     const bad = rs.filter(r=>!r.ok).map(r=>r.src);
     const ok  = rs.filter(r=>r.ok).map(r=>r.src);
     if (!ok.length){ showError('Нет ни одного доступного изображения. Проверь ссылки.'); return; }
-    if (bad.length){ showError('Часть изображений не загрузилась. Остальные откроются.', bad); setTimeout(hideError, 2500); }
+    if (bad.length){ showError('Часть изображений не загрузилась. Остальные откроются.', bad); setTimeout(hideError, 2200); }
     init(ok);
   }).catch(e=>showError('Ошибка: ' + (e && e.message ? e.message : e)));
 
   function init(okUrls){
     try{
-      // размеры страницы = половина iframe; берём напрямую из контейнера
-      const W = Math.max(200, Math.floor(bookEl.clientWidth));   // ширина всего разворота (iframe)
-      const H = Math.max(200, Math.floor(bookEl.clientHeight));  // высота iframe
-      const pageW = Math.floor(W/2);
-      const pageH = H;
+      // размер страницы = половина iframe
+      const W = Math.max(200, Math.floor(bookEl.clientWidth));
+      const H = Math.max(200, Math.floor(bookEl.clientHeight));
+      const pageW = Math.floor(W/2), pageH = H;
 
       const pf = new St.PageFlip(bookEl, {
-        width: pageW,            // ширина ОДНОЙ страницы = половина iframe
-        height: pageH,           // высота страницы = высота iframe
-        size: 'fixed',           // фиксированный размер — без «растяжек»
+        width: pageW,
+        height: pageH,
+        size: 'fixed',
         minWidth: 180, minHeight: 180,
         maxShadowOpacity: 0.25,
         flippingTime: 800,
         showHint: false,
         usePortrait: false,
-        showCover: true,         // обложка показывается одна
+        showCover: true,      // обложка — одна, «твёрдая»
         startPage: 0,
-        autoSize: false,         // сами управляем размерами
+        autoSize: false,
         clickEventForward: true,
         mobileScrollSupport: true,
         drawShadow: true
       });
 
-      // генерим HTML-страницы: первая и последняя — твёрдые (hard), остальные — мягкие
-      const container = document.createDocumentFragment();
-      okUrls.forEach((src, i)=>{
+      // создаём DOM страниц; 1-я и последняя — hard, остальные — soft
+      const host = document.createElement('div');
+      okUrls.forEach((src,i)=>{
         const p = document.createElement('div');
         p.className = 'page';
-        if (i===0 || i===okUrls.length-1) p.setAttribute('data-density','hard');
-        else p.setAttribute('data-density','soft');
-        const img = document.createElement('img');
-        img.src = src; img.alt = '';
-        p.appendChild(img);
-        container.appendChild(p);
+        p.setAttribute('data-density', (i===0 || i===okUrls.length-1) ? 'hard' : 'soft');
+        const img = document.createElement('img'); img.src = src; img.alt = '';
+        p.appendChild(img); host.appendChild(p);
       });
 
-      // ВАЖНО: loadFromHTML ожидает список DOM-элементов (NodeList/ArrayLike), отдаём children массива
-      const temp = document.createElement('div');
-      temp.style.display='none';
-      document.body.appendChild(temp);
-      temp.appendChild(container);
-      const pagesNodes = temp.querySelectorAll('.page');
-
-      if (typeof pf.loadFromHTML === 'function') pf.loadFromHTML(pagesNodes);
+      const nodes = host.querySelectorAll('.page');
+      if (typeof pf.loadFromHTML === 'function') pf.loadFromHTML(nodes);
       else if (typeof pf.loadFromImages === 'function') pf.loadFromImages(okUrls);
-      temp.remove();
 
       // звук
       const flipSound = document.getElementById('flipSound');
       pf.on('flip', ()=>{ try{ flipSound.currentTime=0; flipSound.play(); }catch(e){} });
 
-      // скрытие центральной тени на обложке/последней
-      function updateCenterShadow(){
-        const idx = pf.getCurrentPageIndex();
-        bookEl.classList.toggle('single', idx===0 || idx===okUrls.length-1);
-      }
-      updateCenterShadow();
-      pf.on('flip', updateCenterShadow);
-
-      // если iframe ресайзят — обновляем жёстко
+      // пересчёт при изменении iframe
       window.addEventListener('resize', ()=>{
         const w = Math.max(200, Math.floor(bookEl.clientWidth));
         const h = Math.max(200, Math.floor(bookEl.clientHeight));
