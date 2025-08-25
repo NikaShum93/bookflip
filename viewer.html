@@ -8,40 +8,35 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/css/page-flip.min.css">
 
 <style>
-  /* прозрачный фон и без скролла */
+  /* фон прозрачный, без скролла */
   html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:transparent}
 
-  /* контейнер книги занимает весь iframe */
-  .wrap{position:absolute;inset:0;display:grid;place-items:center;background:transparent}
-  #book{position:relative;width:100%;height:100%;background:transparent;overflow:hidden}
+  /* книга занимает весь iframe (который = 2*w × h) */
+  #book{position:absolute;inset:0;background:transparent;overflow:hidden;
+        filter:drop-shadow(0 14px 22px rgba(0,0,0,.25));}
 
-  /* мягкая внешняя тень под книгой (не занимает место) */
-  #book::after{
-    content:""; position:absolute; left:8%; right:8%; bottom:8px; height:22px; pointer-events:none;
-    filter: blur(10px);
-    background: radial-gradient(60% 100% at 50% 0%,
-      rgba(0,0,0,.32) 0%, rgba(0,0,0,0) 70%);
-  }
-
-  /* выключаем любые внутренние отступы/фоны либы */
+  /* сброс внутренних фонов/отступов библиотеки */
   .stf__wrapper,.stf__block,.stf__item,.stf__page,.stf__content{
-    background:transparent !important; padding:0 !important; margin:0 !important; border:0 !important; box-shadow:none !important;
+    background:transparent !important; margin:0 !important; padding:0 !important; border:0 !important; box-shadow:none !important;
   }
+  .stf__page{overflow:hidden}
 
-  /* краевая виньетка на страницах как ОВЕРЛЕЙ (не “съедает” ширину) */
+  /* виньетка по краям каждой страницы (оверлей, не добавляет полей) */
   .stf__item::after{
     content:""; position:absolute; inset:0; pointer-events:none; mix-blend-mode:multiply;
     background:linear-gradient(90deg,
-      rgba(0,0,0,.18) 0%, rgba(0,0,0,0) 14%,
-      rgba(0,0,0,0) 86%, rgba(0,0,0,.18) 100%);
+      rgba(0,0,0,.16) 0%,
+      rgba(0,0,0,0) 12%,
+      rgba(0,0,0,0) 88%,
+      rgba(0,0,0,.16) 100%);
   }
 
-  /* страница = одно изображение. ничего лишнего */
+  /* страница = одно изображение, ровно по странице */
   .page{width:100%;height:100%}
   .page img{
-    display:block; width:100%; height:100%;
-    object-fit:contain;              /* ты подаёшь страницы в точном размере — пустот не будет */
-    user-select:none; -webkit-user-drag:none;
+    width:100%; height:100%;
+    object-fit:contain;          /* изображения уже нужного размера => без полей */
+    display:block; user-select:none; -webkit-user-drag:none;
   }
 
   /* оверлей только для ошибок */
@@ -49,106 +44,81 @@
     background:rgba(0,0,0,.25);color:#fff;font:14px/1.4 system-ui,Segoe UI,Roboto,Arial;z-index:9999}
   .overlay.show{display:flex}
   .overlay .panel{background:#121212;border:1px solid #333;border-radius:12px;padding:16px 18px;max-width:720px}
-  .overlay .list{max-height:220px;overflow:auto;margin-top:8px;font-family:ui-monospace,Consolas,monospace;font-size:12px}
 </style>
 </head>
 <body>
-<div class="wrap"><div id="book"></div></div>
 
-<div id="ovl" class="overlay"><div class="panel">
-  <div id="ovlTitle">Ошибка</div>
-  <div id="ovlBody" class="list"></div>
-</div></div>
+<div id="book"></div>
+
+<div id="ovl" class="overlay"><div class="panel" id="ovlMsg">Ошибка</div></div>
 
 <audio id="flipSound" src="https://raw.githubusercontent.com/NikaShum93/bookflip/main/flip.mp3" preload="auto"></audio>
 
 <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.min.js"></script>
 <script>
 (function(){
+  const qs = new URLSearchParams(location.search);
+
+  // список изображений (разделители | или ,)
+  const urls = (qs.get('imgs')||'')
+    .split(/[|,]/).map(s=>s.trim()).filter(Boolean)
+    .map(s=>{try{return decodeURIComponent(s)}catch{return s}});
+
+  // размер ОДНОЙ страницы из редактора
+  const W = parseInt(qs.get('w'),10);
+  const H = parseInt(qs.get('h'),10);
+
+  if (!urls.length) return showErr('Параметр imgs пуст — нет изображений.');
+  if (!(W>0 && H>0)) return showErr('Не передан размер страницы: w×h.');
+
   const bookEl = document.getElementById('book');
 
-  // --- читаем параметры из редактора ---
-  const q = new URLSearchParams(location.search);
-  const urls = (q.get('imgs')||'').split(/[|,]/).map(s=>s.trim()).filter(Boolean).map(s=>{try{return decodeURIComponent(s)}catch{return s}});
-  // размеры страницы (если редактор их передаёт)
-  const pageWParam = parseInt(q.get('w')||'',10);
-  const pageHParam = parseInt(q.get('h')||'',10);
+  // инициализация движка: размер страницы ровно w×h
+  const pf = new St.PageFlip(bookEl, {
+    width: W,                 // ширина ОДНОЙ страницы
+    height: H,                // высота страницы
+    size: 'fixed',            // фикс — без автоподгонки
+    autoSize: false,
+    showCover: true,          // обложка — отдельная страница (твёрдая)
+    usePortrait: false,       // разворот из двух страниц
+    flippingTime: 800,        // скорость
+    maxShadowOpacity: 0.6,    // тени для «волны»
+    drawShadow: true,
+    clickEventForward: true,
+    mobileScrollSupport: true,
+    useMouseEvents: true
+  });
 
-  const ovl = document.getElementById('ovl');
-  const t = document.getElementById('ovlTitle');
-  const b = document.getElementById('ovlBody');
-  const showError = (msg, list)=>{ t.textContent=msg; b.innerHTML=(list||[]).map(s=>`<div>${s}</div>`).join(''); ovl.classList.add('show'); };
-  const hideError = ()=>ovl.classList.remove('show');
+  // создаём DOM страниц: первая/последняя — hard, остальные — soft
+  const host = document.createElement('div');
+  urls.forEach((src, i)=>{
+    const p = document.createElement('div'); p.className='page';
+    p.setAttribute('data-density', (i===0 || i===urls.length-1) ? 'hard' : 'soft');
+    const img = document.createElement('img'); img.src = src; img.alt = '';
+    p.appendChild(img); host.appendChild(p);
+  });
 
-  const fallbacks = [
-    "https://images.unsplash.com/photo-1514511542842-209a87b229c6?q=80&w=1200&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?q=80&w=1200&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1529336953121-adb2f3f1c6b6?q=80&w=1200&auto=format&fit=crop"
-  ];
-  const pages = urls.length ? urls : fallbacks;
+  const pagesNodes = host.querySelectorAll('.page');
+  if (typeof pf.loadFromHTML === 'function') pf.loadFromHTML(pagesNodes);
+  else if (typeof pf.loadFromImages === 'function') pf.loadFromImages(urls);
 
-  // предзагрузка
-  Promise.all(pages.map(src=>new Promise(res=>{
-    const im=new Image(); im.onload=()=>res({ok:true,src}); im.onerror=()=>res({ok:false,src}); im.src=src;
-  }))).then(rs=>{
-    const bad = rs.filter(r=>!r.ok).map(r=>r.src);
-    const ok  = rs.filter(r=>r.ok).map(r=>r.src);
-    if (!ok.length){ showError('Нет ни одного доступного изображения. Проверь ссылки.'); return; }
-    if (bad.length){ showError('Часть изображений не загрузилась. Остальные откроются.', bad); setTimeout(hideError, 2200); }
-    init(ok);
-  }).catch(e=>showError('Ошибка: ' + (e && e.message ? e.message : e)));
+  // звук
+  const flipSound = document.getElementById('flipSound');
+  pf.on('flip', ()=>{ try{ flipSound.currentTime=0; flipSound.play(); }catch(e){} });
 
-  function init(okUrls){
-    try{
-      // ширина/высота страницы: из параметров редактора, иначе — из фактического iframe
-      const pageW = Number.isFinite(pageWParam) ? pageWParam : Math.floor(bookEl.clientWidth/2);
-      const pageH = Number.isFinite(pageHParam) ? pageHParam : Math.floor(bookEl.clientHeight);
+  // навигация: клики по сторонам + клавиши
+  bookEl.addEventListener('click', (e)=>{
+    const x = e.clientX - bookEl.getBoundingClientRect().left;
+    if (x < bookEl.clientWidth/2) pf.flipPrev('top'); else pf.flipNext('top');
+  });
+  window.addEventListener('keydown', (e)=>{
+    if (e.key==='ArrowLeft') pf.flipPrev('bottom');
+    else if (e.key==='ArrowRight') pf.flipNext('bottom');
+  });
 
-      const pf = new St.PageFlip(bookEl, {
-        width: pageW,             // ширина ОДНОЙ страницы = то, что задал редактор
-        height: pageH,            // высота страницы
-        size: 'fixed',            // фиксированно, без растягивания
-        minWidth: 180, minHeight: 180,
-        maxShadowOpacity: 0.25,
-        flippingTime: 800,
-        showHint: false,
-        usePortrait: false,
-        showCover: true,          // обложка показывается одна (твёрдая)
-        startPage: 0,
-        autoSize: false,          // мы управляем сами
-        clickEventForward: true,
-        mobileScrollSupport: true,
-        drawShadow: true
-      });
+  // никакого ресайза — размер фиксирован под w×h (как задал редактор)
 
-      // строим HTML-страницы (первая/последняя — hard)
-      const host = document.createElement('div');
-      okUrls.forEach((src,i)=>{
-        const p = document.createElement('div'); p.className='page';
-        p.setAttribute('data-density', (i===0 || i===okUrls.length-1) ? 'hard' : 'soft');
-        const img = document.createElement('img'); img.src=src; img.alt='';
-        p.appendChild(img); host.appendChild(p);
-      });
-      const nodes = host.querySelectorAll('.page');
-      if (typeof pf.loadFromHTML === 'function') pf.loadFromHTML(nodes);
-      else if (typeof pf.loadFromImages === 'function') pf.loadFromImages(okUrls);
-
-      // звук
-      const flipSound = document.getElementById('flipSound');
-      pf.on('flip', ()=>{ try{ flipSound.currentTime=0; flipSound.play(); }catch(e){} });
-
-      // при изменении размеров iframe — фикс-обновление
-      window.addEventListener('resize', ()=>{
-        const w = Number.isFinite(pageWParam) ? pageWParam : Math.floor(bookEl.clientWidth/2);
-        const h = Number.isFinite(pageHParam) ? pageHParam : Math.floor(bookEl.clientHeight);
-        pf.update({ width: w, height: h, size: 'fixed' });
-      });
-
-      hideError();
-    }catch(e){
-      showError('Ошибка инициализации книги: ' + (e && e.message ? e.message : e));
-    }
-  }
+  function showErr(msg){ const o=document.getElementById('ovl'); const m=document.getElementById('ovlMsg'); m.textContent=msg; o.classList.add('show'); }
 })();
 </script>
 </body>
