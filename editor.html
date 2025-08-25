@@ -23,6 +23,7 @@
   .hint{font-size:12px;color:var(--mut)}
   .pill{padding:4px 8px;background:#1d2330;border:1px solid var(--bd);border-radius:999px;font-size:12px}
   @media (max-width: 980px){ .wrap{grid-template-columns:1fr; } }
+  .err{color:#ff9b9b;font-size:12px;display:none}
 </style>
 </head>
 <body>
@@ -33,22 +34,23 @@
     <textarea id="imgs" placeholder="https://.../cover.jpg
 https://.../page1.jpg
 https://.../page2.jpg"></textarea>
+    <div id="errImgs" class="err">Добавь хотя бы одну ссылку на изображение</div>
 
     <div class="row cols">
       <div>
         <label>Время перелистывания, мс</label>
-        <input id="flipTime" type="number" value="800" min="200" step="50"/>
+        <input id="flipTime" type="text" value="800"/>
       </div>
       <div>
         <label>Наклон (почти прямо = 0..4)</label>
-        <input id="tilt" type="number" value="2" min="0" max="12"/>
+        <input id="tilt" type="text" value="2"/>
       </div>
     </div>
 
     <div class="row">
       <div style="flex:1">
         <label>Звук перелистывания (URL на .mp3/.wav)</label>
-        <input id="sfx" placeholder="https://.../page-flip.mp3"/>
+        <input id="sfx" placeholder="https://raw.githubusercontent.com/NikaShum93/bookflip/main/flip.mp3"/>
         <div class="hint">Подойдёт любой CC0 / royalty-free (например, Pixabay / Freesound).</div>
       </div>
       <button class="btn sec" id="testSound">Тест</button>
@@ -58,8 +60,8 @@ https://.../page2.jpg"></textarea>
       <div>
         <label>Размер книги в Genially (ширина×высота, px)</label>
         <div class="row">
-          <input id="w" type="number" value="900" min="300" step="10" style="max-width:120px"> ×
-          <input id="h" type="number" value="600" min="220" step="10" style="max-width:120px">
+          <input id="w" type="text" value="900" style="max-width:120px"> ×
+          <input id="h" type="text" value="600" style="max-width:120px">
         </div>
         <div class="hint">Поставь такие же размеры у iframe в Genially.</div>
       </div>
@@ -96,20 +98,73 @@ https://.../page2.jpg"></textarea>
     <div style="margin-top:12px">
       <div class="mut" style="margin-bottom:6px"><b>Где быстро залить картинки и получить прямые ссылки?</b></div>
       <ul class="hint">
-        <li><b>GitHub</b>: положи файлы в <code>/images</code>, используй <i>Raw</i>-ссылки вида <code>https://raw.githubusercontent.com/&lt;user&gt;/&lt;repo&gt;/main/images/&lt;file&gt;.jpg</code>.</li>
-        <li><b>Dropbox</b>: Share link → замени <code>?dl=0</code> на <code>?raw=1</code> для прямого URL.</li>
-        <li><b>Imgur</b>: копируй прямые ссылки <code>https://i.imgur.com/....jpg</code>.</li>
+        <li><b>GitHub</b>: положи файлы в <code>/images</code>, используй RAW-ссылки вида <code>https://raw.githubusercontent.com/NikaShum93/bookflip/main/images/FILE.jpg</code>.</li>
+        <li><b>Dropbox</b>: Share link → замени <code>?dl=0</code> на <code>?raw=1</code>.</li>
+        <li><b>Imgur</b>: прямые ссылки <code>https://i.imgur.com/....jpg</code>.</li>
       </ul>
     </div>
   </div>
 </div>
 
 <script>
-function enc(o){ return encodeURIComponent(o); }
+function num(v, def){
+  if (typeof v !== 'string') v = String(v ?? '');
+  v = v.replace(',', '.').trim(); // поддержка запятой
+  const n = Number(v);
+  return Number.isFinite(n) ? n : def;
+}
 function buildUrl(){
-  // viewer.html должен лежать рядом с editor.html
-  const base = location.origin + location.pathname.replace(/editor\.html$/,'') + 'viewer.html';
+  // НАДЁЖНО: строим URL viewer.html независимо от того, как открыт editor.html
+  const base = new URL('viewer.html', location.href).href;
+
   const lines = (document.getElementById('imgs').value||'')
-    .split(/\r?\n/)
-    .map(s=>s.trim())
-    .filter
+    .split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+
+  if (!lines.length) { document.getElementById('errImgs').style.display='block'; return ''; }
+  document.getElementById('errImgs').style.display='none';
+
+  // параметры
+  const flipTime = num(document.getElementById('flipTime').value, 800);
+  const tilt     = num(document.getElementById('tilt').value, 2);
+  const sfx      = (document.getElementById('sfx').value||'').trim();
+  const showHint = document.getElementById('showHint').value === 'true';
+
+  // кодируем список картинок безопасно (разделитель |)
+  const imgsParam = lines.map(encodeURIComponent).join('|');
+
+  const params = new URLSearchParams();
+  params.set('imgs', imgsParam);
+  params.set('flipTime', String(flipTime));
+  params.set('tilt', String(tilt));
+  if (sfx) params.set('sfx', sfx);
+  params.set('showHint', String(showHint));
+
+  return base + '?' + params.toString();
+}
+
+function gen(){
+  const u = buildUrl();
+  if (!u) return;
+  const W = num(document.getElementById('w').value, 900);
+  const H = num(document.getElementById('h').value, 600);
+  document.getElementById('outUrl').value = u;
+  const iframe = `<iframe src="${u}" width="${W}" height="${H}" style="border:0;overflow:hidden" allow="autoplay"></iframe>`;
+  document.getElementById('outIframe').value = iframe;
+}
+
+document.getElementById('gen').addEventListener('click', gen);
+document.getElementById('copyUrl').addEventListener('click', ()=>{navigator.clipboard.writeText(outUrl.value)});
+document.getElementById('copyIframe').addEventListener('click', ()=>{navigator.clipboard.writeText(outIframe.value)});
+document.getElementById('preview').addEventListener('click', ()=>{
+  gen();
+  const u = document.getElementById('outUrl').value;
+  if (u) document.getElementById('live').src = u;
+});
+document.getElementById('testSound').addEventListener('click', ()=>{
+  const s = document.getElementById('sfx').value.trim();
+  if(!s){ alert('Вставь URL на .mp3 / .wav'); return; }
+  const a = new Audio(s); a.play().catch(()=>alert('Браузер заблокировал autoplay. Кликни ещё раз.'));
+});
+</script>
+</body>
+</html>
