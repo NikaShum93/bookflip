@@ -3,70 +3,52 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>PageFlip Editor for Genially</title>
-<link rel="stylesheet" href="https://unpkg.com/page-flip/dist/css/page-flip.min.css">
+<title>Книга для Genially — редактор</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/css/page-flip.min.css">
 <style>
-  :root{--bg:#0f1115;--fg:#e7eef7;--mut:#9fb3c8;--acc:#7bd7ff;--bd:#2a2f3a;}
-  html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font:14px/1.4 system-ui,Segoe UI,Roboto,Arial;}
-  .wrap{max-width:1100px;margin:24px auto;padding:0 16px;display:grid;grid-template-columns: 1.1fr .9fr; gap:18px;}
+  :root{--bg:#0f1115;--fg:#e7eef7;--mut:#a8b3c7;--bd:#263041;--acc:#79d2ff}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,Segoe UI,Roboto,Arial}
+  .wrap{max-width:1100px;margin:24px auto;padding:0 16px;display:grid;grid-template-columns:1.1fr .9fr;gap:18px}
+  @media (max-width:980px){.wrap{grid-template-columns:1fr}}
   h1{margin:0 0 10px;font-size:20px}
-  .card{background:#121520;border:1px solid var(--bd);border-radius:14px;padding:14px}
-  .row{display:flex;gap:8px;align-items:center;margin:8px 0}
-  textarea, input, select{width:100%;background:#0b0e14;color:var(--fg);border:1px solid var(--bd);border-radius:10px;padding:10px}
+  .card{background:#111827;border:1px solid var(--bd);border-radius:14px;padding:14px}
+  label{display:block;margin:8px 0 6px;color:var(--mut)}
+  textarea,input,select{width:100%;background:#0b1220;color:var(--fg);border:1px solid var(--bd);border-radius:10px;padding:10px}
   textarea{min-height:160px;white-space:pre}
-  .btn{background:var(--acc);color:#002b3a;border:0;border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:700}
-  .btn.sec{background:#1d2330;color:var(--fg);border:1px solid var(--bd)}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .btn{background:var(--acc);color:#032b3a;border:0;border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:700}
+  .btn.sec{background:#0b1220;color:var(--fg);border:1px solid var(--bd)}
+  .out{font-family:ui-monospace,Consolas,Menlo,monospace;font-size:12px}
   .mut{color:var(--mut)}
-  .cols{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  .out{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size:12px}
   iframe{width:100%;height:420px;border:1px solid var(--bd);border-radius:12px;background:#000}
-  .hint{font-size:12px;color:var(--mut)}
-  .pill{padding:4px 8px;background:#1d2330;border:1px solid var(--bd);border-radius:999px;font-size:12px}
-  @media (max-width: 980px){ .wrap{grid-template-columns:1fr; } }
-  .err{color:#ff9b9b;font-size:12px;display:none}
+  small.err{display:none;color:#ff9b9b}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="card">
     <h1>Книга для Genially — редактор</h1>
-    <div class="row"><span class="pill">1</span><div class="mut">Вставь <b>по одной ссылке на изображение</b> в строку (обложка первой)</div></div>
-    <textarea id="imgs" placeholder="https://.../cover.jpg
-https://.../page1.jpg
-https://.../page2.jpg"></textarea>
-    <div id="errImgs" class="err">Добавь хотя бы одну ссылку на изображение</div>
 
-    <div class="row cols">
-      <div>
-        <label>Время перелистывания, мс</label>
-        <input id="flipTime" type="text" value="800"/>
-      </div>
-      <div>
-        <label>Наклон (почти прямо = 0..4)</label>
-        <input id="tilt" type="text" value="2"/>
-      </div>
-    </div>
+    <label for="imgs">1) Вставь по одной ссылке на изображение в строку (обложка первой):</label>
+    <textarea id="imgs" placeholder="https://.../cover.png
+https://.../page1.png
+https://.../page2.png
+https://.../back.png"></textarea>
+    <small id="errImgs" class="err">Добавь хотя бы одну ссылку на изображение</small>
 
     <div class="row">
-      <div style="flex:1">
-        <label>Звук перелистывания (URL на .mp3/.wav)</label>
-        <input id="sfx" placeholder="https://raw.githubusercontent.com/NikaShum93/bookflip/main/flip.mp3"/>
-        <div class="hint">Подойдёт любой CC0 / royalty-free (например, Pixabay / Freesound).</div>
-      </div>
-      <button class="btn sec" id="testSound">Тест</button>
-    </div>
-
-    <div class="row cols">
       <div>
-        <label>Размер книги в Genially (ширина×высота, px)</label>
+        <label>2) Размер ОДНОЙ страницы (px):</label>
         <div class="row">
-          <input id="w" type="text" value="900" style="max-width:120px"> ×
-          <input id="h" type="text" value="600" style="max-width:120px">
+          <input id="w" type="number" min="100" step="1" value="600" placeholder="Ширина (w)">
+          <input id="h" type="number" min="100" step="1" value="900" placeholder="Высота (h)">
         </div>
-        <div class="hint">Поставь такие же размеры у iframe в Genially.</div>
+        <small class="mut">iframe будет шириной <b>2×w</b> и высотой <b>h</b></small>
       </div>
       <div>
-        <label>Подсказки перелистывания</label>
+        <label>3) Скорость перелистывания, мс</label>
+        <input id="flipTime" type="number" min="100" step="50" value="800">
+        <label style="margin-top:8px">Подсказки перелистывания</label>
         <select id="showHint">
           <option value="false">Выключить</option>
           <option value="true">Включить</option>
@@ -74,97 +56,78 @@ https://.../page2.jpg"></textarea>
       </div>
     </div>
 
-    <div class="row" style="margin-top:10px; gap:10px">
-      <button class="btn" id="gen">Сгенерировать ссылку + iframe</button>
-      <button class="btn sec" id="preview">Превью ниже</button>
+    <label style="margin-top:6px">4) Звук (mp3/wav) — по умолчанию твой:</label>
+    <input id="sfx" type="url" placeholder="https://..." value="https://raw.githubusercontent.com/NikaShum93/bookflip/main/flip.mp3">
+
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn" onclick="gen()">Сгенерировать ссылку + iframe</button>
+      <button class="btn sec" onclick="preview()">Превью ниже</button>
     </div>
   </div>
 
   <div class="card">
-    <div class="row"><span class="pill">2</span><div class="mut">Скопируй iframe и вставь в Genially → «Внешний контент / URL»</div></div>
-    <div class="row"><label>Ссылка на книгу:</label></div>
-    <input id="outUrl" class="out" readonly/>
-    <div class="row" style="gap:8px">
-      <button class="btn sec" id="copyUrl">Копировать ссылку</button>
-    </div>
-    <div class="row"><label>iframe для Genially:</label></div>
-    <textarea id="outIframe" class="out" rows="6" readonly></textarea>
-    <div class="row" style="gap:8px">
-      <button class="btn sec" id="copyIframe">Копировать iframe</button>
-    </div>
-    <div class="row"><span class="pill">3</span><div class="mut">Превью</div></div>
-    <iframe id="live" allow="autoplay"></iframe>
+    <h2 style="margin:0 0 10px">2) Скопируй в Genially</h2>
+    <label>Ссылка на книгу:</label>
+    <textarea id="outUrl" class="out" rows="2" readonly></textarea>
+    <button class="btn sec" onclick="copy('outUrl')" style="margin:6px 0 12px">Копировать ссылку</button>
 
-    <div style="margin-top:12px">
-      <div class="mut" style="margin-bottom:6px"><b>Где быстро залить картинки и получить прямые ссылки?</b></div>
-      <ul class="hint">
-        <li><b>GitHub</b>: положи файлы в <code>/images</code>, используй RAW-ссылки вида <code>https://raw.githubusercontent.com/NikaShum93/bookflip/main/images/FILE.jpg</code>.</li>
-        <li><b>Dropbox</b>: Share link → замени <code>?dl=0</code> на <code>?raw=1</code>.</li>
-        <li><b>Imgur</b>: прямые ссылки <code>https://i.imgur.com/....jpg</code>.</li>
-      </ul>
-    </div>
+    <label>iframe для Genially:</label>
+    <textarea id="outIframe" class="out" rows="5" readonly></textarea>
+    <button class="btn sec" onclick="copy('outIframe')" style="margin:6px 0 12px">Копировать iframe</button>
+
+    <h3 style="margin:6px 0">3) Превью</h3>
+    <iframe id="pv" title="preview"></iframe>
   </div>
 </div>
 
 <script>
-function num(v, def){
-  if (typeof v !== 'string') v = String(v ?? '');
-  v = v.replace(',', '.').trim(); // поддержка запятой
-  const n = Number(v);
-  return Number.isFinite(n) ? n : def;
-}
+function num(v, d){ v = parseFloat(String(v).replace(',', '.')); return Number.isFinite(v) ? v : d; }
+
 function buildUrl(){
-  // НАДЁЖНО: строим URL viewer.html независимо от того, как открыт editor.html
   const base = new URL('viewer.html', location.href).href;
 
   const lines = (document.getElementById('imgs').value||'')
     .split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-
-  if (!lines.length) { document.getElementById('errImgs').style.display='block'; return ''; }
+  if (!lines.length){ document.getElementById('errImgs').style.display='inline'; return ''; }
   document.getElementById('errImgs').style.display='none';
 
-  // параметры
+  const w = num(document.getElementById('w').value, 600);
+  const h = num(document.getElementById('h').value, 900);
   const flipTime = num(document.getElementById('flipTime').value, 800);
-  const tilt     = num(document.getElementById('tilt').value, 2);
-  const sfx      = (document.getElementById('sfx').value||'').trim();
   const showHint = document.getElementById('showHint').value === 'true';
-
-  // кодируем список картинок безопасно (разделитель |)
-  const imgsParam = lines.map(encodeURIComponent).join('|');
+  const sfx = (document.getElementById('sfx').value||'').trim();
 
   const params = new URLSearchParams();
-  params.set('imgs', imgsParam);
+  params.set('imgs', lines.map(encodeURIComponent).join('|'));
+  params.set('w', String(w));
+  params.set('h', String(h));
   params.set('flipTime', String(flipTime));
-  params.set('tilt', String(tilt));
-  if (sfx) params.set('sfx', sfx);
   params.set('showHint', String(showHint));
+  if (sfx) params.set('sfx', sfx);
 
   return base + '?' + params.toString();
 }
 
 function gen(){
-  const u = buildUrl();
-  if (!u) return;
-  const W = num(document.getElementById('w').value, 900);
-  const H = num(document.getElementById('h').value, 600);
+  const u = buildUrl(); if (!u) return;
+  const w = num(document.getElementById('w').value, 600);
+  const h = num(document.getElementById('h').value, 900);
+
   document.getElementById('outUrl').value = u;
-  const iframe = `<iframe src="${u}" width="${W}" height="${H}" style="border:0;overflow:hidden" allow="autoplay"></iframe>`;
+  const iframe = `<iframe src="${u}" width="${w*2}" height="${h}" style="border:0;overflow:hidden;background:transparent" allow="autoplay"></iframe>`;
   document.getElementById('outIframe').value = iframe;
 }
 
-document.getElementById('gen').addEventListener('click', gen);
-document.getElementById('copyUrl').addEventListener('click', ()=>{navigator.clipboard.writeText(outUrl.value)});
-document.getElementById('copyIframe').addEventListener('click', ()=>{navigator.clipboard.writeText(outIframe.value)});
-document.getElementById('preview').addEventListener('click', ()=>{
-  gen();
-  const u = document.getElementById('outUrl').value;
-  if (u) document.getElementById('live').src = u;
-});
-document.getElementById('testSound').addEventListener('click', ()=>{
-  const s = document.getElementById('sfx').value.trim();
-  if(!s){ alert('Вставь URL на .mp3 / .wav'); return; }
-  const a = new Audio(s); a.play().catch(()=>alert('Браузер заблокировал autoplay. Кликни ещё раз.'));
-});
+function preview(){
+  const u = buildUrl(); if (!u) return;
+  document.getElementById('pv').src = u;
+}
+
+function copy(id){
+  const el = document.getElementById(id);
+  el.select(); el.setSelectionRange(0, 99999);
+  try{ document.execCommand('copy'); }catch(_){}
+}
 </script>
 </body>
 </html>
