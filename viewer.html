@@ -7,16 +7,23 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/css/page-flip.min.css">
 <style>
   html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:transparent}
-  #book{position:absolute;inset:0;background:transparent;overflow:hidden;
-        filter:drop-shadow(0 14px 22px rgba(0,0,0,.25));}
+  #book{
+    position:absolute;inset:0;background:transparent;overflow:hidden;
+    /* мягкая тень под книгой — как реальная */
+    filter: drop-shadow(0 16px 28px rgba(0,0,0,.28));
+  }
 
-  /* Полный сброс внутренних оформлений, чтобы не было полей */
+  /* Полный сброс — никаких внутренних полей */
   .stf__wrapper,.stf__block,.stf__item,.stf__page,.stf__content{
     background:transparent !important;margin:0 !important;padding:0 !important;border:0 !important;box-shadow:none !important;
   }
   .stf__page{overflow:hidden}
 
-  /* Виньетки только по внешним краям страниц (центр чистый) */
+  /* ===== ВИНЬЕТКИ И ТЕНИ =====
+     — внешние края: дают объём;
+     — внутренняя тень у корешка: только на развороте (не на обложке). */
+
+  /* внешние края (масштабируются в % под любой размер) */
   .stf__item--left::after, .stf__item--right::after{
     content:""; position:absolute; inset:0; pointer-events:none; mix-blend-mode:multiply;
   }
@@ -26,16 +33,28 @@
   .stf__item--right::after{
     background:linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 88%, rgba(0,0,0,.16) 100%);
   }
-  /* Когда видна одна страница (обложка/задняя) — виньеток нет вовсе */
-  #book.single .stf__item::after{display:none}
 
-  /* Страница = одно изображение ровно по странице */
+  /* внутренняя тень корешка — две тонкие полосы у стыка на развороте */
+  .stf__item--left::before, .stf__item--right::before{
+    content:""; position:absolute; top:0; bottom:0; width:3.2%;
+    pointer-events:none; mix-blend-mode:multiply; opacity:.28;
+  }
+  .stf__item--left::before{ right:0;  background:linear-gradient(90deg, rgba(0,0,0,.55), rgba(0,0,0,0)); }
+  .stf__item--right::before{ left:0;   background:linear-gradient(90deg, rgba(0,0,0,0), rgba(0,0,0,.55)); }
+
+  /* когда видна одна страница (обложка/задняя) — ни внутренних, ни внешних в районе корешка */
+  #book.single .stf__item::before{display:none}
+  /* у обложки корешок не «живет»: убираем центральные эффекты полностью */
+  #book.single .stf__item--left::after,
+  #book.single .stf__item--right::after{ background:none }
+
+  /* страница = одно изображение ровно по странице */
   .page{width:100%;height:100%}
   .page img{
     width:100%;height:100%;
-    object-fit:contain;           /* картинки у тебя уже нужного размера */
+    object-fit:contain;
     display:block;user-select:none;-webkit-user-drag:none;
-    pointer-events:none;          /* клики ловит контейнер, не <img> */
+    pointer-events:none; /* клики ловит контейнер, не картинка */
   }
 
   /* Оверлей ошибок (на всякий) */
@@ -49,7 +68,7 @@
 <div id="book"></div>
 <div id="ovl" class="overlay"><div class="panel" id="ovlMsg">Ошибка</div></div>
 
-<audio id="flipSound" preload="auto"></audio>
+<audio id="flipSound" preload="auto" src="https://raw.githubusercontent.com/NikaShum93/bookflip/main/flip.mp3"></audio>
 <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.min.js"></script>
 <script>
 (function(){
@@ -65,9 +84,8 @@
   const bookEl   = document.getElementById('book');
   const flipTime = +qs.get('flipTime') > 0 ? +qs.get('flipTime') : 800;
   const showHint = qs.get('showHint') === 'true';
-  const sfxUrl   = (qs.get('sfx')||'').trim() || 'https://raw.githubusercontent.com/NikaShum93/bookflip/main/flip.mp3';
 
-  // размеры страницы: сначала w/h из URL; если нет — берём из iframe
+  // размеры страницы: сначала w/h из URL; если нет — из iframe
   let pageW = parseInt(qs.get('w'),10);
   let pageH = parseInt(qs.get('h'),10);
   if (!(pageW>0 && pageH>0)) {
@@ -82,22 +100,22 @@
     height: pageH,
     size: 'fixed',
     autoSize: false,
-    showCover: true,          // обложка/задняя — твёрдые
+    showCover: true,          // обложка и задняя — жёсткие
     usePortrait: false,       // разворот из двух страниц
     flippingTime: flipTime,
     maxShadowOpacity: 0.6,
     drawShadow: true,
     mobileScrollSupport: true,
     useMouseEvents: true,
-    clickEventForward: false, // сами обрабатываем клики
+    clickEventForward: false, // клики обрабатываем сами (исключаем дубль)
     showHint: showHint
   });
 
-  // создаём DOM-страницы
+  // страницы
   const host = document.createElement('div');
   urls.forEach((src,i)=>{
     const p = document.createElement('div'); p.className='page';
-    p.setAttribute('data-density', (i===0 || i===urls.length-1) ? 'hard' : 'soft'); // крайние — hard, внутренние — soft
+    p.setAttribute('data-density', (i===0 || i===urls.length-1) ? 'hard' : 'soft');
     const img = document.createElement('img'); img.src=src; img.alt='';
     p.appendChild(img); host.appendChild(p);
   });
@@ -105,12 +123,7 @@
   if (typeof pf.loadFromHTML === 'function') pf.loadFromHTML(nodes);
   else pf.loadFromImages(urls);
 
-  // звук
-  const flipSound = document.getElementById('flipSound');
-  flipSound.src = sfxUrl;
-  pf.on('flip', ()=>{ try{ flipSound.currentTime=0; flipSound.play(); }catch(e){} });
-
-  // убрать виньетки, когда видна одна страница (обложка/задняя)
+  // синхронизация класса single — чтобы корешок не «жил» у обложки
   function syncSingle(){
     const i = pf.getCurrentPageIndex();
     const single = (i===0 || i===urls.length-1);
@@ -119,7 +132,11 @@
   syncSingle();
   pf.on('flip', syncSingle);
 
-  // --- КЛИКИ БЕЗ ДВОЙНОГО СРАБАТЫВАНИЯ ---
+  // звук
+  const flipSound = document.getElementById('flipSound');
+  pf.on('flip', ()=>{ try{ flipSound.currentTime=0; flipSound.play(); }catch(e){} });
+
+  // безопасные клики (без двойных срабатываний)
   let lock = false;
   function safeFlip(dir){
     if (lock || pf.isFlipping()) return;
