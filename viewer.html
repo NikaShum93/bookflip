@@ -1,5 +1,5 @@
 diff --git a/viewer.html b/viewer.html
-index e847ad64bfecc59de2328e4390d6665bd7991b2c..ed7a1678073b57f407f9a76dcf59280618ef9eb3 100644
+index e847ad64bfecc59de2328e4390d6665bd7991b2c..9e16cf49931e4e15278c7c06e8d59bc3ad6031cc 100644
 --- a/viewer.html
 +++ b/viewer.html
 @@ -7,119 +7,123 @@
@@ -91,7 +91,8 @@ index e847ad64bfecc59de2328e4390d6665bd7991b2c..ed7a1678073b57f407f9a76dcf592806
      drawShadow: true,
      clickEventForward: true,
      mobileScrollSupport: true,
-     useMouseEvents: true,
+-    useMouseEvents: true,
++    useMouseEvents: false, // отключаем встроенные клики, чтобы не было двойных переворотов
      showHint: showHint
    });
  
