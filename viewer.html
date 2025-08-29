@@ -24,29 +24,27 @@
   /* рамка книги ровно 2w × h, масштабируем целиком */
   .book-frame{ position:relative; background:transparent; overflow:visible; transform-origin:center center; will-change:transform; z-index:1 }
 
-  /* тень-подложка */
-  .book-frame::after,
-  .book-frame::before{
-    content:"";
-    position:absolute;
-    bottom:-18px; height:36px;
-    pointer-events:none; filter:blur(10px);
-    z-index:0; /* под книгой */
-    background:radial-gradient(60% 100% at 50% 0%,
-      rgba(0,0,0,.35) 0%,
-      rgba(0,0,0,.22) 45%,
-      rgba(0,0,0,.10) 75%,
-      rgba(0,0,0,0) 100%);
+  /* ====== НОВОЕ: «ореол»/объёмная тень вокруг книги ====== */
+  .book-halo{
+    position:absolute; pointer-events:none; z-index:0;
+    /* мягкий объём вокруг (на любой подложке прозрачно) */
+    box-shadow:
+      0 22px 40px rgba(0,0,0,.35),
+      0 6px 18px rgba(0,0,0,.22);
+    border-radius:6px;  /* у корешка угол не скругляем — сам канвас прямой, радиус только у тени */
   }
-  /* разворот — равномерная тень */
-  .book-frame::after{ left:6%; right:6%; }
-
-  /* когда только обложка/задник — тень только справа */
-  .book-frame.single::after{ display:none; }
-  .book-frame.single::before{
-    display:block;
-    left: var(--cover-left, 50%);  /* ширина одной страницы — из JS */
-    right:6%;
+  /* дополнительная «плашка» под книгой, чтобы казалось, что лежит на столе */
+  .book-floor{
+    position:absolute; left:0; right:0; bottom:-8%;
+    height:28%;
+    pointer-events:none; filter: blur(22px);
+    background:
+      radial-gradient(120% 120% at 50% 0%,
+        rgba(0,0,0,.35) 0%,
+        rgba(0,0,0,.22) 28%,
+        rgba(0,0,0,.10) 58%,
+        rgba(0,0,0,0) 100%);
+    z-index:0;
   }
 
   /* сам виджет */
@@ -65,6 +63,7 @@
       inset 0 0 0 1px rgba(0,0,0,.08),
       0 10px 16px rgba(0,0,0,.12);
   }
+  /* лёгкая виньетка внутри листа */
   .stf__page::after{
     content:""; position:absolute; inset:0; pointer-events:none; mix-blend-mode:multiply; z-index:2;
     background:radial-gradient(120% 100% at 50% 50%,
@@ -79,6 +78,16 @@
   .stf__page > *::after{
     content:""; position:absolute; top:0; bottom:0; right:0; width:var(--edge); pointer-events:none; opacity:.5; z-index:2;
     background:linear-gradient(270deg, rgba(0,0,0,.18), rgba(0,0,0,0));
+  }
+
+  /* ====== НОВОЕ: мягкие «загибы» уголков ====== */
+  .stf__page > *::before{
+    content:""; position:absolute; inset:0; pointer-events:none; z-index:2; mix-blend-mode:multiply;
+    background:
+      radial-gradient(22% 22% at 0% 0%, rgba(0,0,0,.20) 0%, rgba(0,0,0,0) 100%),
+      radial-gradient(22% 22% at 100% 0%, rgba(0,0,0,.18) 0%, rgba(0,0,0,0) 100%),
+      radial-gradient(22% 22% at 0% 100%, rgba(0,0,0,.12) 0%, rgba(0,0,0,0) 100%),
+      radial-gradient(22% 22% at 100% 100%, rgba(0,0,0,.12) 0%, rgba(0,0,0,0) 100%);
   }
 
   /* внешние виньетки разворота + корешок */
@@ -110,7 +119,10 @@
   <div id="scene" class="scene">
     <div id="wrapper" class="book-wrapper">
       <div id="frame" class="book-frame">
+        <!-- НОВОЕ: «ореол»/объёмная тень; размеры задаём из JS -->
+        <div id="halo" class="book-halo"></div>
         <div id="book"></div>
+        <div id="floor" class="book-floor"></div>
       </div>
     </div>
     <div id="ovl" class="overlay"><div id="ovlMsg" class="panel">Ошибка</div></div>
@@ -132,6 +144,8 @@
     const wrapper = document.getElementById('wrapper');
     const frame   = document.getElementById('frame');
     const book    = document.getElementById('book');
+    const halo    = document.getElementById('halo');
+    const floor   = document.getElementById('floor');
 
     /* безопасные прозрачные поля: ~15% по ширине, ~20% по высоте */
     const padX = Math.round(pageW * 0.15);
@@ -146,6 +160,32 @@
 
     const edge = Math.round(Math.max(8, Math.min(18, pageW * 0.02)));
     frame.style.setProperty('--edge', edge + 'px');
+
+    /* размеры/позиция halo и «пола» */
+    function sizeDecor(singleSide /*'left'|'right'|null*/){
+      const haloPadding = Math.round(Math.max(10, pageW * 0.045)); // расширяем тень вокруг книги
+      if(singleSide === 'right'){ // обложка
+        halo.style.left   = (pageW - haloPadding) + 'px';
+        halo.style.top    = (-haloPadding) + 'px';
+        halo.style.width  = (pageW + haloPadding*2) + 'px';
+        halo.style.height = (pageH + haloPadding*2) + 'px';
+      }else if(singleSide === 'left'){ // задник
+        halo.style.left   = (-haloPadding) + 'px';
+        halo.style.top    = (-haloPadding) + 'px';
+        halo.style.width  = (pageW + haloPadding*2) + 'px';
+        halo.style.height = (pageH + haloPadding*2) + 'px';
+      }else{ // разворот
+        halo.style.left   = (-haloPadding) + 'px';
+        halo.style.top    = (-haloPadding) + 'px';
+        halo.style.width  = (pageW*2 + haloPadding*2) + 'px';
+        halo.style.height = (pageH   + haloPadding*2) + 'px';
+      }
+      // «пол» под книгой
+      floor.style.left  = '0px';
+      floor.style.right = '0px';
+      floor.style.height = Math.max(18, Math.round(pageH*0.26)) + 'px';
+      floor.style.bottom = (-Math.round(pageH*0.08)) + 'px';
+    }
 
     function fit(){
       const availW = scene.clientWidth;
@@ -181,12 +221,19 @@
     let tease=false;  // флаг «приоткрытия» обложки — звук не проигрываем
     pf.on('flip', ()=>{ if(!tease){ try{ flipSound.currentTime=0; flipSound.play(); }catch(e){} } syncSingle(); });
 
-    /* режим single для обложки/задника (и тень под обложкой) */
+    /* режим single для обложки/задника + обновление теней вокруг */
     function syncSingle(){
       const i=pf.getCurrentPageIndex();
-      frame.classList.toggle('single', (i===0||i===urls.length-1));
+      const last = urls.length-1;
+      frame.classList.toggle('single', (i===0||i===last));
+      // где рисовать halo
+      if(i===0){ sizeDecor('right'); }
+      else if(i===last){ sizeDecor('left'); }
+      else{ sizeDecor(null); }
     }
-    syncSingle();
+
+    pf.on('init', syncSingle);
+    pf.on('flip', syncSingle);
 
     /* клики/стрелки */
     let lock=false;
@@ -220,6 +267,9 @@
     }
 
     function err(msg){const o=document.getElementById('ovl'),m=document.getElementById('ovlMsg');m.textContent=msg;o.classList.add('show');}
+
+    // после инициализации однажды расставим декор
+    sizeDecor(null);
   })();
   </script>
 </body>
