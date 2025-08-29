@@ -8,117 +8,111 @@
 <style>
   html,body{height:100%;margin:0;background:transparent;overflow:hidden}
 
-  /* сцена */
-  .scene{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:transparent}
-
-  /* управляем «воздухом» вокруг, чтобы анимация не резалась */
-  :root{--padX:0px;--padY:0px;--edge:12px;--corner:8px;--spineWidth:18%;--spineOpacity:.22;--sheetShadow:.12}
-
-  .book-wrapper{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;
-    padding:var(--padY) var(--padX);background:transparent;overflow:visible}
-
-  /* ВАЖНО: «клип» контейнер обрезает ВНУТРЕННИЕ тени (корешок, виньетки) по контуру книги */
-  .book-clip{position:relative;overflow:hidden;clip-path:inset(0 round 4px); /* мягкая обрезка */ }
-
-  .book-frame{position:relative;background:transparent;overflow:visible;transform-origin:center center;z-index:1}
-
-  /* Тень-подложка «книга на столе» */
-  .book-frame::after,
-  .book-frame::before{
-    content:"";position:absolute;left:6%;right:6%;bottom:-18px;height:36px;pointer-events:none;filter:blur(10px);z-index:0;
-    background:radial-gradient(60% 100% at 50% 0%,rgba(0,0,0,.35) 0%,rgba(0,0,0,.22) 45%,rgba(0,0,0,.10) 75%,rgba(0,0,0,0) 100%);
+  /* регулируемые «воздушные» поля вокруг книги, чтобы анимация не резалась */
+  :root{
+    --padX:0px;           /* вычисляется из ширины */
+    --padY:0px;           /* вычисляется из высоты */
+    --edge:12px;          /* тёмная кромка у внешних краёв страницы */
+    --cornerR:10px;       /* скругление листа */
+    --spineW:18%;         /* ширина центральной тени корешка */
+    --spineAlpha:.24;     /* плотность тени корешка */
+    --sheetDrop:.16;      /* тень листа наружу */
   }
-  /* на обложке не рисуем широкую подложку, оставляем только справа (как у книги, лежащей закрытой) */
-  .book-frame.single::after{display:none}
-  .book-frame.single::before{content:"";position:absolute;left:50%;right:6%;bottom:-18px;height:36px;pointer-events:none;filter:blur(10px);z-index:0;
-    background:radial-gradient(60% 100% at 50% 0%,rgba(0,0,0,.35) 0%,rgba(0,0,0,.22) 45%,rgba(0,0,0,.10) 75%,rgba(0,0,0,0) 100%)}
 
-  #book{width:100%;height:100%;background:transparent}
+  .scene{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+  .book-wrap{position:relative;display:flex;align-items:center;justify-content:center;
+             padding:var(--padY) var(--padX); background:transparent; overflow:visible}
+  /* рамка книги (масштабируем её целиком) */
+  .book-frame{position:relative; background:transparent; transform-origin:center; z-index:1; overflow:visible}
+
+  /* клип-обёртка — обрезает ВНУТРЕННИЕ тени (корешок/виньетки) по контуру книги */
+  .book-clip{position:relative; overflow:hidden; clip-path:inset(0 round 6px)}
+  #book{width:100%;height:100%; background:transparent}
   .stf__wrapper,.stf__block{overflow:visible !important}
 
-  /* страничка */
-  .page{position:relative;width:100%;height:100%;background:transparent}
-  .page>img{width:100%;height:100%;object-fit:contain;display:block;user-select:none;-webkit-user-drag:none;pointer-events:none}
+  /* “книга на столе” — мягкая подложка, НЕ рисуем её при одиночной обложке */
+  .book-frame::after{content:""; position:absolute; left:6%; right:6%; bottom:-18px; height:36px; pointer-events:none;
+    filter:blur(10px); z-index:0;
+    background:radial-gradient(60% 100% at 50% 0%, rgba(0,0,0,.36) 0, rgba(0,0,0,.22) 45%, rgba(0,0,0,.1) 75%, rgba(0,0,0,0) 100%)}
+  .book-frame.single::after{display:none}
 
-  /* объём страницы */
+  /* внутренняя тень корешка (всегда внутри клипа) */
+  .gutter{position:absolute; top:-8%; bottom:-8%; left:50%; transform:translateX(-50%); width:var(--spineW);
+    pointer-events:none; mix-blend-mode:multiply; z-index:1;
+    background:radial-gradient(70% 120% at 50% 50%, rgba(0,0,0,var(--spineAlpha)) 0%, rgba(0,0,0,.12) 40%, rgba(0,0,0,0) 75%)}
+  .book-frame.single .gutter{display:none}
+
+  /* страница */
+  .page{position:relative;width:100%;height:100%; background:transparent}
+  .page>img{width:100%;height:100%;object-fit:contain;display:block;-webkit-user-drag:none;user-select:none;pointer-events:none}
+
+  /* тело листа + лёгкая наружная тень */
   .stf__page{
-    background:transparent !important;overflow:visible !important;border-radius:var(--corner);
-    box-shadow:inset 0 0 0 1px rgba(0,0,0,.08), 0 10px 16px rgba(0,0,0,var(--sheetShadow));
+    background:transparent !important; overflow:visible !important; border-radius:var(--cornerR);
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,.08), 0 12px 18px rgba(0,0,0,var(--sheetDrop));
+    will-change:transform;
   }
-  /* внутренняя виньетка + уголки */
+  /* более жёсткие обложки */
+  [data-density="hard"].stf__page{
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,.10), 0 16px 24px rgba(0,0,0,.18);
+  }
+
+  /* внутренняя виньетка (объём) + диагональные уголки */
   .stf__page::after{
-    content:"";position:absolute;inset:0;pointer-events:none;z-index:2;mix-blend-mode:multiply;
+    content:""; position:absolute; inset:0; pointer-events:none; z-index:2; mix-blend-mode:multiply;
     background:
       radial-gradient(120% 100% at 50% 50%, rgba(0,0,0,.12) 0%, rgba(0,0,0,0) 62%),
-      linear-gradient(to bottom, rgba(0,0,0,.10), rgba(0,0,0,0) 18%, rgba(0,0,0,0) 82%, rgba(0,0,0,.10)),
+      linear-gradient(to bottom, rgba(0,0,0,.11), rgba(0,0,0,0) 18%, rgba(0,0,0,0) 82%, rgba(0,0,0,.11)),
       radial-gradient(120% 120% at 0% 0%, rgba(0,0,0,.18) 0%, rgba(0,0,0,0) 65%),
       radial-gradient(120% 120% at 100% 100%, rgba(0,0,0,.18) 0%, rgba(0,0,0,0) 65%);
     background-repeat:no-repeat;
-    background-size:100% 100%,100% 100%,22% 22%,22% 22%;
-    background-position:center,center,left top,right bottom;
-  }
-  /* внешние кромки */
-  .stf__page::before{
-    content:"";position:absolute;top:0;bottom:0;left:0;width:var(--edge);z-index:2;pointer-events:none;opacity:.55;
-    background:linear-gradient(90deg, rgba(0,0,0,.18), rgba(0,0,0,0));
-  }
-  .stf__page > *::after{
-    content:"";position:absolute;top:0;bottom:0;right:0;width:var(--edge);z-index:2;pointer-events:none;opacity:.55;
-    background:linear-gradient(270deg, rgba(0,0,0,.18), rgba(0,0,0,0));
-  }
-  /* «жёсткие» страницы (обложки) */
-  [data-density="hard"].stf__page{
-    box-shadow:inset 0 0 0 1px rgba(0,0,0,.10), 0 14px 20px rgba(0,0,0,.16);
+    background-size:100% 100%, 100% 100%, 22% 22%, 22% 22%;
+    background-position:center, center, left top, right bottom;
+    border-radius:var(--cornerR);
   }
 
-  /* корешок – тень теперь ЗА-клипом и не выходит наружу */
-  .gutter{
-    position:absolute;top:-6%;bottom:-6%;left:50%;transform:translateX(-50%);width:var(--spineWidth);
-    pointer-events:none;mix-blend-mode:multiply;z-index:1;
-    background:radial-gradient(65% 120% at 50% 50%,rgba(0,0,0,var(--spineOpacity)) 0%,rgba(0,0,0,.12) 40%,rgba(0,0,0,0) 75%);
-  }
-  .book-frame.single .gutter{display:none}
+  /* внешние кромки разворота */
+  .stf__item--left::before,.stf__item--right::before{
+    content:""; position:absolute; top:0; bottom:0; width:3%; pointer-events:none; mix-blend-mode:multiply; opacity:.45; z-index:1}
+  .stf__item--left::before {right:0; background:linear-gradient(90deg, rgba(0,0,0,.7), rgba(0,0,0,0))}
+  .stf__item--right::before{left:0;  background:linear-gradient(90deg, rgba(0,0,0,0), rgba(0,0,0,.7))}
 
-  /* лёгкая виньетка у внешних кромок разворота */
+  /* лёгкая виньетка у внешних краёв */
   .stf__item--left::after,.stf__item--right::after{
-    content:"";position:absolute;inset:0;pointer-events:none;mix-blend-mode:multiply;z-index:1}
+    content:""; position:absolute; inset:0; pointer-events:none; mix-blend-mode:multiply; z-index:1}
   .stf__item--left::after {background:linear-gradient(90deg, rgba(0,0,0,.18) 0%, rgba(0,0,0,0) 14%)}
   .stf__item--right::after{background:linear-gradient(90deg, rgba(0,0,0,0) 86%, rgba(0,0,0,.18) 100%)}
 
-  .stf__item--left::before,.stf__item--right::before{
-    content:"";position:absolute;top:0;bottom:0;width:3.2%;pointer-events:none;mix-blend-mode:multiply;opacity:.4;z-index:1}
-  .stf__item--left::before {right:0;background:linear-gradient(90deg, rgba(0,0,0,.65), rgba(0,0,0,0))}
-  .stf__item--right::before{left:0; background:linear-gradient(90deg, rgba(0,0,0,0), rgba(0,0,0,.65))}
-
-  /* уголки (corner-peel) */
+  /* подсказка загиба уголка */
   .curl{position:absolute;width:22%;height:22%;pointer-events:none;z-index:3;opacity:0;
-    background:radial-gradient(100% 100% at 100% 100%, rgba(0,0,0,.35) 0%, rgba(0,0,0,.12) 55%, rgba(0,0,0,0) 75%),
-               radial-gradient(140% 140% at 100% 100%, rgba(255,255,255,.75) 0%, rgba(255,255,255,0) 60%);
-    filter:blur(.2px);transform-origin:100% 100%;transform:rotate(0) translate(0,0);
-    transition:opacity .25s ease, transform .25s ease}
+    background:
+      radial-gradient(100% 100% at 100% 100%, rgba(0,0,0,.35) 0, rgba(0,0,0,.12) 55%, rgba(0,0,0,0) 75%),
+      radial-gradient(140% 140% at 100% 100%, rgba(255,255,255,.75) 0, rgba(255,255,255,0) 60%);
+    transform-origin:100% 100%; transform:rotate(0) translate(0,0);
+    transition:opacity .25s ease, transform .25s ease; filter:blur(.2px)}
   .stf__item--right .curl-right{right:0;bottom:0;border-bottom-right-radius:12px}
   .stf__item--left  .curl-left {left:0; bottom:0;border-bottom-left-radius: 12px;transform-origin:0 100%}
-  .peel-right .stf__item--right .curl-right{opacity:.9;transform:rotate(-14deg) translate(6%,8%)}
-  .peel-left  .stf__item--left  .curl-left {opacity:.9;transform:rotate( 14deg) translate(-6%,8%)}
+  .peel-right .stf__item--right .curl-right{opacity:.92;transform:rotate(-14deg) translate(6%,8%)}
+  .peel-left  .stf__item--left  .curl-left {opacity:.92;transform:rotate( 14deg) translate(-6%,8%)}
   .book-frame.single .curl{display:none}
 
-  .overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.25);color:#fff;z-index:9}
-  .overlay.show{display:flex}
-  .overlay .panel{background:#121212;border:1px solid #333;border-radius:12px;padding:12px 14px}
+  /* overlay */
+  .ovl{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.25);z-index:9}
+  .ovl.show{display:flex}
+  .ovl .panel{background:#121212;color:#fff;border:1px solid #333;border-radius:12px;padding:12px 14px}
 </style>
 </head>
 <body>
   <div id="scene" class="scene">
-    <div id="wrapper" class="book-wrapper">
+    <div id="wrap" class="book-wrap">
       <div id="frame" class="book-frame">
-        <!-- обрезчик внутренних теней -->
         <div id="clip" class="book-clip">
           <div id="book"></div>
           <div id="gutter" class="gutter"></div>
         </div>
       </div>
     </div>
-    <div id="ovl" class="overlay"><div id="ovlMsg" class="panel">Ошибка</div></div>
+    <div id="ovl" class="ovl"><div id="ovlMsg" class="panel">Ошибка</div></div>
   </div>
 
   <audio id="flipSound" preload="auto" src="https://raw.githubusercontent.com/NikaShum93/bookflip/main/flip.mp3"></audio>
@@ -127,47 +121,49 @@
   (function(){
     const qs=new URLSearchParams(location.search);
     const urls=(qs.get('imgs')||'').split(/[|,]/).map(s=>{s=s.trim();try{return decodeURIComponent(s)}catch{return s}}).filter(Boolean);
-    if(!urls.length){return err('Пустой imgs — нет изображений.');}
+    if(!urls.length) return fail('Пустой imgs — нет изображений.');
 
-    const flipTime=+qs.get('flipTime')>0?+qs.get('flipTime'):800;
-    let pageW=parseInt(qs.get('w'),10)||600;
-    let pageH=parseInt(qs.get('h'),10)||900;
+    const flipTime = +qs.get('flipTime')>0 ? +qs.get('flipTime') : 800;
+    const pageW    = parseInt(qs.get('w'),10) || 600;
+    const pageH    = parseInt(qs.get('h'),10) || 900;
 
-    const scene=document.getElementById('scene');
-    const wrapper=document.getElementById('wrapper');
-    const frame=document.getElementById('frame');
-    const clip=document.getElementById('clip');
-    const book=document.getElementById('book');
+    const scene  = document.getElementById('scene');
+    const wrap   = document.getElementById('wrap');
+    const frame  = document.getElementById('frame');
+    const clip   = document.getElementById('clip');
+    const bookEl = document.getElementById('book');
 
-    /* прозрачные поля вокруг — по 15% по бокам и 20% сверху/снизу,
-       чтобы волна/обложка не обрезались */
-    const padX=Math.round(pageW*0.15);
-    const padY=Math.round(pageH*0.20);
-    wrapper.style.setProperty('--padX',padX+'px');
-    wrapper.style.setProperty('--padY',padY+'px');
+    /* прозрачные поля: 18% по бокам, 24% по высоте — чтобы волна и обложка точно не резались */
+    const padX = Math.round(pageW*0.18);
+    const padY = Math.round(pageH*0.24);
+    wrap.style.setProperty('--padX', padX+'px');
+    wrap.style.setProperty('--padY', padY+'px');
 
-    /* размеры прямоугольника книги */
-    frame.style.width  =(pageW*2)+'px';
-    frame.style.height = pageH   +'px';
-    clip .style.width  =(pageW*2)+'px';
-    clip .style.height = pageH   +'px';
+    /* размеры самой книги */
+    frame.style.width = (pageW*2)+'px';
+    frame.style.height=  pageH    +'px';
+    clip .style.width = (pageW*2)+'px';
+    clip .style.height=  pageH    +'px';
 
-    frame.style.setProperty('--edge',Math.round(Math.max(10,Math.min(18,pageW*0.02)))+'px');
+    frame.style.setProperty('--edge', Math.round(Math.max(10, Math.min(18, pageW*0.02)))+'px');
 
+    /* масштабирование в доступное окно с учётом «воздуха» */
     function fit(){
       const availW=scene.clientWidth, availH=scene.clientHeight;
-      const needW=pageW*2+padX*2, needH=pageH+padY*2;
+      const needW=pageW*2 + padX*2, needH=pageH + padY*2;
       const s=Math.min(availW/needW, availH/needH);
       frame.style.transform='scale('+s+')';
     }
     addEventListener('resize',fit); fit();
 
-    const pf=new St.PageFlip(book,{
-      width:pageW,height:pageH,size:'fixed',autoSize:false,usePortrait:false,showCover:true,
-      flippingTime:flipTime,drawShadow:true,maxShadowOpacity:.85,mobileScrollSupport:true,showHint:false
+    /* инициализация flip */
+    const pf=new St.PageFlip(bookEl,{
+      width:pageW,height:pageH,size:'fixed',autoSize:false,usePortrait:false,
+      showCover:true, flippingTime:flipTime, drawShadow:true, maxShadowOpacity:.85,
+      mobileScrollSupport:true, showHint:false
     });
 
-    /* создаём страницы */
+    /* страницы */
     const host=document.createElement('div');
     urls.forEach((src,i)=>{
       const p=document.createElement('div'); p.className='page';
@@ -176,12 +172,16 @@
       p.appendChild(img); host.appendChild(p);
     });
     const nodes=host.querySelectorAll('.page');
-    if(typeof pf.loadFromHTML==='function') pf.loadFromHTML(nodes); else pf.loadFromImages(urls);
+    if (typeof pf.loadFromHTML==='function') pf.loadFromHTML(nodes);
+    else pf.loadFromImages(urls);
 
     /* звук */
     const flipSound=document.getElementById('flipSound');
-    let tease=false;
-    pf.on('flip',()=>{ if(!tease){ try{ flipSound.currentTime=0; flipSound.play(); }catch(e){} } syncSingle(); });
+    let teasing=false;
+    pf.on('flip',()=>{
+      if(!teasing){ try{ flipSound.currentTime=0; flipSound.play(); }catch(e){} }
+      syncSingle();
+    });
 
     function syncSingle(){
       const i=pf.getCurrentPageIndex();
@@ -189,49 +189,52 @@
     }
     syncSingle();
 
-    /* клики / стрелки */
+    /* управление */
     let lock=false;
-    function safeFlip(dir){ if(lock||pf.isFlipping())return; lock=true; (dir==='prev'?pf.flipPrev('top'):pf.flipNext('top')); setTimeout(()=>lock=false, pf.getSettings().flippingTime+40); }
-    scene.addEventListener('click',e=>{const r=scene.getBoundingClientRect();safeFlip((e.clientX-r.left)<r.width/2?'prev':'next');});
-    addEventListener('keydown',e=>{if(e.key==='ArrowLeft')safeFlip('prev'); if(e.key==='ArrowRight')safeFlip('next');});
+    function safeFlip(dir){
+      if(lock||pf.isFlipping()) return;
+      lock=true; (dir==='prev'?pf.flipPrev('top'):pf.flipNext('top'));
+      setTimeout(()=>lock=false, pf.getSettings().flippingTime+40);
+    }
+    scene.addEventListener('click',e=>{
+      const r=scene.getBoundingClientRect();
+      safeFlip((e.clientX-r.left)<r.width/2?'prev':'next');
+    });
+    addEventListener('keydown',e=>{
+      if(e.key==='ArrowLeft')  safeFlip('prev');
+      if(e.key==='ArrowRight') safeFlip('next');
+    });
 
-    /* Приоткрытие обложки при наведении */
+    /* приоткрытие обложки при наведении */
     const canHover=matchMedia('(hover:hover) and (pointer:fine)').matches;
     if(canHover){
-      let teaseTimer=null, restoreTimer=null;
       const TEASE=Math.max(300,Math.min(600,Math.round(flipTime*0.6)));
-      const setFlipTime=t=>{ try{ pf.getSettings().flippingTime=t; }catch(e){} };
-
-      function teaseCover(){
-        if(pf.isFlipping()||tease||pf.getCurrentPageIndex()!==0) return;
-        tease=true;
+      const setTime=t=>{try{pf.getSettings().flippingTime=t}catch(e){}};
+      frame.addEventListener('mouseenter',()=>{
+        if(pf.isFlipping()||teasing||pf.getCurrentPageIndex()!==0) return;
+        teasing=true;
         const old=pf.getSettings().flippingTime;
-        setFlipTime(TEASE);
-        pf.flipNext('top');                // приоткрыли
-        teaseTimer=setTimeout(()=>{
-          pf.flipPrev('top');              // закрыли
-          restoreTimer=setTimeout(()=>{ setFlipTime(old); tease=false; syncSingle(); }, TEASE+40);
-        }, Math.floor(TEASE*0.38));
-      }
-      frame.addEventListener('mouseenter',teaseCover);
+        setTime(TEASE); pf.flipNext('top');
+        setTimeout(()=>{ pf.flipPrev('top'); setTimeout(()=>{ setTime(old); teasing=false; syncSingle(); }, TEASE+40); }, Math.floor(TEASE*0.38));
+      });
 
-      /* corner-peel подсказки у кромок */
-      const edgeZone=0.12;
+      /* подсказка «уголка» */
+      const edge=0.12;
       scene.addEventListener('mousemove',e=>{
         const r=frame.getBoundingClientRect(), x=(e.clientX-r.left)/r.width;
-        if(pf.isFlipping()){ frame.classList.remove('peel-left','peel-right'); return; }
+        if(pf.isFlipping()) { frame.classList.remove('peel-left','peel-right'); return; }
         const idx=pf.getCurrentPageIndex(), single=(idx===0||idx===urls.length-1);
         if(single){ frame.classList.remove('peel-left','peel-right'); return; }
-        if(x>1-edgeZone){ frame.classList.add('peel-right'); frame.classList.remove('peel-left'); }
-        else if(x<edgeZone){ frame.classList.add('peel-left'); frame.classList.remove('peel-right'); }
+        if(x>1-edge) frame.classList.add('peel-right'), frame.classList.remove('peel-left');
+        else if(x<edge) frame.classList.add('peel-left'), frame.classList.remove('peel-right');
         else frame.classList.remove('peel-left','peel-right');
       });
       scene.addEventListener('mouseleave',()=>frame.classList.remove('peel-left','peel-right'));
     }
 
-    /* добавляем уголки на каждую видимую страницу */
+    /* дорисуем видимые уголки (DOM создаётся динамически) */
     function addCurls(){
-      const pages=book.querySelectorAll('.stf__page');
+      const pages=bookEl.querySelectorAll('.stf__page');
       pages.forEach(p=>{
         if(!p.querySelector('.curl-left')){
           const l=document.createElement('div'); l.className='curl curl-left';
@@ -240,9 +243,9 @@
         }
       });
     }
-    setTimeout(addCurls,80);
+    setTimeout(addCurls,120);
 
-    function err(msg){const o=document.getElementById('ovl'),m=document.getElementById('ovlMsg');m.textContent=msg;o.classList.add('show');}
+    function fail(m){const o=document.getElementById('ovl'), s=document.getElementById('ovlMsg'); s.textContent=m; o.classList.add('show');}
   })();
   </script>
 </body>
