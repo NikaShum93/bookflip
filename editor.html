@@ -3,51 +3,52 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Teachy Witchy — Живая Книга (генератор iframe)</title>
+<title>Генератор iframe — Живая книга</title>
 <style>
-  :root{--bg:#0f1115;--fg:#e8eef7;--mut:#9fb3c8;--bd:#293243;--acc:#7fd2ff}
-  html,body{background:var(--bg);color:var(--fg);margin:0;font:14px/1.45 system-ui,Segoe UI,Roboto,Arial}
-  .wrap{max-width:900px;margin:28px auto;padding:0 16px}
-  h1{margin:0 0 14px}
+  :root{--bg:#0f1115;--fg:#eaf2ff;--mut:#9fb3c8;--bd:#1c2433;--acc:#7ae0ff}
+  html,body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,Segoe UI,Roboto,Arial}
+  .wrap{max-width:880px;margin:28px auto;padding:0 16px}
+  h1{margin:0 0 14px;font-size:22px}
   label{display:block;margin:10px 0 6px;color:var(--mut)}
-  textarea,input{width:100%;background:#0b1220;border:1px solid var(--bd);color:var(--fg);border-radius:10px;padding:10px}
+  textarea,input{width:100%;background:#0a1322;color:var(--fg);border:1px solid var(--bd);border-radius:10px;padding:10px}
+  textarea{min-height:110px}
   .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  button{background:var(--acc);color:#032a38;border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;margin-top:10px}
+  .btn{background:var(--acc);color:#052532;border:0;border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:700;margin-top:10px}
   .out{font-family:ui-monospace,Consolas,Menlo,monospace}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Teachy Witchy — Живая Книга</h1>
+  <h1>Генератор iframe — Живая книга</h1>
 
-  <label>Ссылки на изображения (по одной в строку; обложка первая, задник последний):</label>
-  <textarea id="imgs" rows="8" placeholder="https://.../cover.png
+  <label>Ссылки на изображения (по одной в строку; обложка первой, задняя — последней):</label>
+  <textarea id="imgs" placeholder="https://.../cover.png
 https://.../page1.png
 https://.../back.png"></textarea>
 
   <div class="row">
     <div>
-      <label>Ширина страницы (w, px)</label>
+      <label>Ширина страницы (w, px):</label>
       <input id="w" type="number" value="600" min="100" step="1">
     </div>
     <div>
-      <label>Высота страницы (h, px)</label>
+      <label>Высота страницы (h, px):</label>
       <input id="h" type="number" value="900" min="100" step="1">
     </div>
   </div>
 
   <div class="row">
     <div>
-      <label>Скорость перелистывания, мс</label>
+      <label>Скорость перелистывания (мс):</label>
       <input id="flip" type="number" value="800" min="100" step="50">
     </div>
     <div>
-      <label>Cache-buster (меняется автоматически)</label>
+      <label>Cache-buster (генерируется сам):</label>
       <input id="v" type="text" readonly>
     </div>
   </div>
 
-  <button onclick="gen()">Сгенерировать iframe</button>
+  <button class="btn" onclick="gen()">Сгенерировать iframe</button>
 
   <label>iframe для Genially:</label>
   <textarea id="out" class="out" rows="6" readonly></textarea>
@@ -65,15 +66,16 @@ function gen(){
   const v=Date.now().toString(36);
   document.getElementById('v').value=v;
 
-  const base='https://nikashum93.github.io/bookflip/viewer.html';
+  const base='viewer.html'; // локальный путь в том же репо
   const params=new URLSearchParams({
     imgs: lines.map(encodeURIComponent).join('|'),
     w:String(w), h:String(h), flipTime:String(flip), v
   });
   const src=`${base}?${params.toString()}`;
 
-  const iframe=`<iframe src="${src}" width="${w*2}" height="${h}" style="border:0;overflow:hidden;background:transparent" allow="autoplay"></iframe>`;
-  document.getElementById('out').value=iframe;
+  const iframe=`<iframe src="${src}" width="${w*2}" height="${h}" style="border:0;overflow:hidden;background:transparent" allow="autoplay" scrolling="no"></iframe>`;
+  const out=document.getElementById('out');
+  out.value=iframe; out.focus(); out.select();
 }
 </script>
 </body>
