@@ -3,80 +3,55 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Генератор iframe — Живая книга</title>
+<title>Bookflip Editor</title>
 <style>
-  :root{--bg:#0f1115;--fg:#eaf2ff;--mut:#9fb3c8;--bd:#1c2433;--acc:#7ae0ff}
-  html,body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,Segoe UI,Roboto,Arial}
-  .wrap{max-width:880px;margin:28px auto;padding:0 16px}
-  h1{margin:0 0 14px;font-size:22px}
-  label{display:block;margin:10px 0 6px;color:var(--mut)}
-  textarea,input{width:100%;background:#0a1322;color:var(--fg);border:1px solid var(--bd);border-radius:10px;padding:10px}
-  textarea{min-height:110px}
-  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  .btn{background:var(--acc);color:#052532;border:0;border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:700;margin-top:10px}
-  .out{font-family:ui-monospace,Consolas,Menlo,monospace}
+  body{background:#111;color:#eee;font-family:Arial,Helvetica,sans-serif;margin:20px}
+  h1{font-size:20px;margin-bottom:10px}
+  textarea,input{width:100%;margin:5px 0;padding:6px;border-radius:6px;border:1px solid #444;background:#222;color:#eee}
+  button{padding:8px 12px;margin:6px 0;border:none;border-radius:6px;background:#4cafef;color:#000;font-weight:bold;cursor:pointer}
+  button:hover{background:#66cfff}
+  pre{background:#000;padding:10px;border-radius:6px;white-space:pre-wrap;word-break:break-all}
+  .out{margin-top:15px}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>Генератор iframe — Живая книга</h1>
+  <h1>Bookflip Editor</h1>
 
-  <label>Ссылки на изображения (по одной в строку; обложка первой, задняя — последней):</label>
-  <textarea id="imgs" placeholder="https://.../cover.png
-https://.../page1.png
-https://.../back.png"></textarea>
+  <label>Ссылки на изображения (по одной в строку):</label>
+  <textarea id="imgs" rows="6"></textarea>
 
-  <div class="row">
-    <div>
-      <label>Ширина страницы (w, px):</label>
-      <input id="w" type="number" value="600" min="100" step="1">
-    </div>
-    <div>
-      <label>Высота страницы (h, px):</label>
-      <input id="h" type="number" value="900" min="100" step="1">
-    </div>
+  <label>Размер страницы (ширина x высота, px):</label>
+  <input id="w" value="1600">
+  <input id="h" value="2000">
+
+  <label>Скорость перелистывания (мс):</label>
+  <input id="flipTime" value="800">
+
+  <button id="gen">Сгенерировать iframe для Genially</button>
+
+  <div class="out">
+    <h3>iframe:</h3>
+    <pre id="out"></pre>
   </div>
-
-  <div class="row">
-    <div>
-      <label>Скорость перелистывания (мс):</label>
-      <input id="flip" type="number" value="800" min="100" step="50">
-    </div>
-    <div>
-      <label>Cache-buster (генерируется сам):</label>
-      <input id="v" type="text" readonly>
-    </div>
-  </div>
-
-  <button class="btn" onclick="gen()">Сгенерировать iframe</button>
-
-  <label>iframe для Genially:</label>
-  <textarea id="out" class="out" rows="6" readonly></textarea>
-</div>
 
 <script>
-function gen(){
-  const lines=(document.getElementById('imgs').value||'')
-    .split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-  if(!lines.length){ alert('Добавь хотя бы один URL'); return; }
+document.getElementById('gen').onclick=()=>{
+  const base='https://nikashum93.github.io/bookflip/viewer.html';
 
-  const w=+document.getElementById('w').value||600;
-  const h=+document.getElementById('h').value||900;
-  const flip=+document.getElementById('flip').value||800;
-  const v=Date.now().toString(36);
-  document.getElementById('v').value=v;
+  const imgs=document.getElementById('imgs').value
+    .split(/\n+/).map(s=>s.trim()).filter(Boolean)
+    .map(encodeURIComponent).join('|');
 
-  const base='viewer.html'; // локальный путь в том же репо
-  const params=new URLSearchParams({
-    imgs: lines.map(encodeURIComponent).join('|'),
-    w:String(w), h:String(h), flipTime:String(flip), v
-  });
-  const src=`${base}?${params.toString()}`;
+  const w=document.getElementById('w').value||1600;
+  const h=document.getElementById('h').value||2000;
+  const flipTime=document.getElementById('flipTime').value||800;
 
-  const iframe=`<iframe src="${src}" width="${w*2}" height="${h}" style="border:0;overflow:hidden;background:transparent" allow="autoplay" scrolling="no"></iframe>`;
-  const out=document.getElementById('out');
-  out.value=iframe; out.focus(); out.select();
-}
+  const url=`${base}?imgs=${imgs}&w=${w}&h=${h}&flipTime=${flipTime}`;
+
+  const iframe=`<iframe src="${url}" width="${w*2}" height="${h}" style="border:0;overflow:hidden;background:transparent" allow="autoplay" scrolling="no"></iframe>`;
+
+  document.getElementById('out').textContent=iframe;
+};
 </script>
 </body>
 </html>
