@@ -4,141 +4,100 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Teachy Witchy — Живая Книга (редактор)</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/css/page-flip.min.css">
 <style>
-  :root{
-    --bg1:#0b0d1a; --bg2:#171a32; --card:#121528; --ink:#e9f0ff; --mut:#9fb4d6; --bd:#2a2f55; --acc:#9d7dff; --acc2:#6be1ff;
-  }
-  *{box-sizing:border-box}
-  html,body{height:100%;margin:0;background:radial-gradient(1200px 800px at 70% -10%, #222a6b 0%, #0a0d1c 60%), linear-gradient(180deg,var(--bg2),var(--bg1));color:var(--ink);font:15px/1.5 Inter,system-ui,Segoe UI,Roboto,Arial}
-  body{padding:28px 16px}
-  .head{
-    text-align:center;margin-bottom:18px; position:relative;
-  }
-  .title{
-    font-family: "Trebuchet MS", ui-serif; font-weight:800; letter-spacing:.5px; margin:0;
-    font-size:26px; 
-    background:radial-gradient(120% 120% at 50% -30%, #fff 0%, #d4c9ff 35%, #8fe9ff 70%, #7ed0ff 85%, #a7b6ff 100%);
-    -webkit-background-clip:text; background-clip:text; color:transparent;
-    text-shadow: 0 0 20px rgba(157,125,255,.35), 0 0 28px rgba(107,225,255,.25);
-  }
-  .subtitle{margin:6px 0 0;color:var(--mut)}
-  .wrap{max-width:840px;margin:0 auto}
-  .card{
-    background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.0));
-    border:1px solid var(--bd); border-radius:16px; padding:16px 14px;
-    backdrop-filter: blur(4px); box-shadow: 0 12px 40px rgba(20,18,62,.35), inset 0 0 60px rgba(157,125,255,.06);
-  }
+  :root{--bg:#0e0b1a;--panel:#121026;--ink:#e8e6ff;--mut:#a7a3c9;--acc:#8b7dff;--bd:#2a2740}
+  html,body{margin:0;background:radial-gradient(60% 50% at 50% 10%, #1a1533, #0f0d1f), #0e0b1a;color:var(--ink);font:15px/1.5 system-ui,Segoe UI,Roboto,Arial}
+  .wrap{max-width:900px;margin:24px auto;padding:0 16px}
+  h1{margin:0 0 16px;font-weight:800;letter-spacing:.5px;text-shadow:0 0 18px rgba(139,125,255,.35)}
+  .card{background:var(--panel);border:1px solid var(--bd);border-radius:14px;padding:14px;margin:0 0 14px;box-shadow:0 12px 40px rgba(0,0,0,.25), inset 0 0 40px rgba(139,125,255,.06)}
   label{display:block;margin:10px 0 6px;color:var(--mut)}
-  textarea,input{width:100%;background:#0b0f20;color:var(--ink);border:1px solid var(--bd);border-radius:12px;padding:12px}
-  textarea{min-height:160px;white-space:pre}
-  .row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
-  @media (max-width:720px){.row{grid-template-columns:1fr}}
-  .btn{
-    appearance:none; background:linear-gradient(135deg,var(--acc),var(--acc2));
-    color:#06101a; border:0; border-radius:12px; padding:12px 16px; cursor:pointer; font-weight:800;
-    box-shadow: 0 10px 28px rgba(109,131,255,.35), inset 0 0 24px rgba(255,255,255,.25);
-  }
-  .btn:active{transform:translateY(1px)}
-  .out{font-family:ui-monospace,Consolas,Menlo,monospace;font-size:12.5px}
-  .hint{color:var(--mut);margin-top:6px}
-  .tools{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
-  .copy{background:#0b0f20;border:1px solid var(--bd);color:var(--ink);border-radius:10px;padding:10px 12px;cursor:pointer}
-  small.err{display:none;color:#ff9b9b}
-  .mt{margin-top:14px}
-  .footer{max-width:840px;margin:16px auto 0;color:#7da3d6;text-align:center;font-size:12.5px}
+  textarea,input{width:100%;background:#0b0a18;color:var(--ink);border:1px solid var(--bd);border-radius:10px;padding:10px}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .btn{display:inline-block;background:linear-gradient(135deg,#8b7dff,#44d3ff);border:0;border-radius:12px;padding:10px 14px;color:#0b0a18;font-weight:800;cursor:pointer;box-shadow:0 8px 30px rgba(68,211,255,.2)}
+  .mono{font-family:ui-monospace,Consolas,Menlo,monospace;font-size:12px}
+  iframe{width:100%;height:420px;border:1px solid var(--bd);border-radius:12px;background:#000;margin-top:10px}
+  .mut{color:var(--mut)}
 </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="head">
-      <h1 class="title">Teachy Witchy — Живая Книга</h1>
-      <div class="subtitle">Вставь ссылки → укажи размер страницы → получи iframe для Genially</div>
-    </div>
+<div class="wrap">
+  <h1>Teachy Witchy — Живая Книга</h1>
 
-    <div class="card">
-      <label for="imgs">1) Ссылки на изображения (по одной в строку, обложка первой, задняя — последней):</label>
-      <textarea id="imgs" placeholder="https://.../cover.png
-https://.../page1.png
-https://.../page2.png
-https://.../back.png"></textarea>
-      <small id="errImgs" class="err">Добавь хотя бы одну ссылку</small>
+  <div class="card">
+    <label>Ссылки на изображения (по одной в строку, обложка — первой, задняя — последней):</label>
+    <textarea id="imgs" placeholder="https://.../cover.png
+https://.../page1.png"></textarea>
 
-      <div class="row mt">
-        <div>
-          <label>2) Ширина страницы (px)</label>
-          <input id="w" type="number" min="100" step="1" value="600">
+    <div class="row">
+      <div>
+        <label>Размер ОДНОЙ страницы (px):</label>
+        <div class="row">
+          <input id="w" type="number" value="600" min="100" step="1" placeholder="w">
+          <input id="h" type="number" value="900" min="100" step="1" placeholder="h">
         </div>
-        <div>
-          <label>3) Высота страницы (px)</label>
-          <input id="h" type="number" min="100" step="1" value="900">
-        </div>
-        <div>
-          <label>4) Скорость перелистывания, мс</label>
-          <input id="flipTime" type="number" min="100" step="50" value="800">
-        </div>
+        <small class="mut">iframe будет шириной <b>2×w</b> и высотой <b>h</b></small>
       </div>
-
-      <div class="tools">
-        <button class="btn" onclick="gen()">Сгенерировать iframe</button>
-        <span class="hint">iframe будет шириной <b>2×w</b> и высотой <b>h</b></span>
-      </div>
-
-      <label class="mt">iframe для Genially:</label>
-      <textarea id="outIframe" class="out" rows="5" readonly></textarea>
-      <div class="tools">
-        <button class="copy" onclick="copy('outIframe')">Скопировать iframe</button>
+      <div>
+        <label>Скорость перелистывания, мс</label>
+        <input id="flipTime" type="number" value="800" min="100" step="50">
+        <label style="margin-top:8px">Пустое пространство для анимации (safe, 0–0.35)</label>
+        <input id="safe" type="number" value="0.14" min="0" max="0.35" step="0.01">
       </div>
     </div>
 
-    <div class="footer">© Teachy Witchy · Живая Книга</div>
+    <div style="display:flex; gap:8px; margin-top:12px">
+      <button class="btn" onclick="gen()">Сгенерировать ссылку + iframe</button>
+      <button class="btn" style="background:#0b0a18;color:var(--ink);border:1px solid var(--bd)" onclick="preview()">Превью</button>
+    </div>
   </div>
 
+  <div class="card">
+    <label>Ссылка на книгу:</label>
+    <textarea id="outUrl" class="mono" rows="2" readonly></textarea>
+    <label>iframe для Genially:</label>
+    <textarea id="outIframe" class="mono" rows="5" readonly></textarea>
+    <iframe id="pv" title="preview"></iframe>
+  </div>
+</div>
+
 <script>
-function num(v, d){ v = parseFloat(String(v).replace(',', '.')); return Number.isFinite(v) ? v : d; }
+function encList(lines){ return lines.map(encodeURIComponent).join('|'); }
+function num(v,d){ v=parseFloat(String(v).replace(',','.')); return Number.isFinite(v)?v:d; }
 
 function buildUrl(){
   const base = new URL('viewer.html', location.href).href;
+  const lines = (document.getElementById('imgs').value||'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  if(!lines.length){ alert('Добавьте хотя бы одну ссылку'); return ''; }
 
-  const lines = (document.getElementById('imgs').value || '')
-    .split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+  const w = num(document.getElementById('w').value,600);
+  const h = num(document.getElementById('h').value,900);
+  const flipTime = num(document.getElementById('flipTime').value,800);
+  const safe = Math.max(0, Math.min(0.35, num(document.getElementById('safe').value, 0.14)));
 
-  if (!lines.length){
-    document.getElementById('errImgs').style.display = 'inline';
-    return '';
-  }
-  document.getElementById('errImgs').style.display = 'none';
+  const q = new URLSearchParams();
+  q.set('imgs', encList(lines));
+  q.set('w', String(w));
+  q.set('h', String(h));
+  q.set('flipTime', String(flipTime));
+  q.set('showHint', 'false');
+  q.set('safe', String(safe));
+  q.set('v', String(Date.now())); // пробиваем кэш
 
-  const w = num(document.getElementById('w').value, 600);
-  const h = num(document.getElementById('h').value, 900);
-  const flipTime = num(document.getElementById('flipTime').value, 800);
-
-  const params = new URLSearchParams();
-  params.set('imgs', lines.join('|'));   // без двойного кодирования
-  params.set('w', String(w));
-  params.set('h', String(h));
-  params.set('flipTime', String(flipTime));
-  params.set('showHint', 'false');       // подсказки убраны
-
-  return base + '?' + params.toString();
+  return `${base}?${q.toString()}`;
 }
 
 function gen(){
-  const u = buildUrl(); if (!u) return;
-  const w = num(document.getElementById('w').value, 600);
-  const h = num(document.getElementById('h').value, 900);
-  const iframe = `<iframe src="${u}" width="${w*2}" height="${h}" style="border:0;overflow:hidden;background:transparent" allow="autoplay"></iframe>`;
-  document.getElementById('outIframe').value = iframe;
+  const u = buildUrl(); if(!u) return;
+  const w = num(document.getElementById('w').value,600);
+  const h = num(document.getElementById('h').value,900);
+  document.getElementById('outUrl').value = u;
+  document.getElementById('outIframe').value =
+    `<iframe src="${u}" width="${w*2}" height="${h}" style="border:0;overflow:hidden;background:transparent" allow="autoplay"></iframe>`;
 }
 
-async function copy(id){
-  const el = document.getElementById(id);
-  try{
-    await navigator.clipboard.writeText(el.value);
-  }catch{
-    el.select(); el.setSelectionRange(0, 99999);
-    document.execCommand('copy');
-  }
+function preview(){
+  const u = buildUrl(); if(!u) return;
+  document.getElementById('pv').src = u;
 }
 </script>
 </body>
