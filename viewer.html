@@ -2,193 +2,133 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Живая книга</title>
-
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/css/page-flip.min.css">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Teachy Witchy — Живая Книга · редактор</title>
 <style>
-  :root{
-    --page-w:600px;           /* подменится из query */
-    --page-h:900px;           /* подменится из query */
-    --safe:0.12;              /* прозрачный запас вокруг книги (доли от высоты) */
-    --gutter:28px;            /* визуальная толщина корешка/зазора */
-    --shadow:22px;            /* сила «настольной» тени */
-  }
-  html,body{height:100%;margin:0;background:transparent}
-  .stage{
-    /* прозрачная «сцена» даёт место для анимации — ничего не обрезается */
-    position:fixed; inset:0; display:grid; place-items:center;
-    background:transparent; overflow:visible;
-  }
-  .book-wrap{
-    position:relative;
-    width:calc(var(--page-w)*2);
-    height:var(--page-h);
-    /* прозрачная подушка вокруг книги; *тут* нет цвета, поэтому Genially видит прозрачность */
-    padding:calc(var(--safe) * var(--page-h)) calc(var(--safe) * var(--page-h));
-    box-sizing:content-box;
-    overflow:visible;
-    pointer-events:auto;
-  }
-
-  /* реальная книга */
-  #book{ width:calc(var(--page-w)*2); height:var(--page-h); overflow:visible; }
-
-  /* «настольная» тень ПОД книгой — всегда под центром */
-  .table-shadow{
-    position:absolute; left:50%; top:50%;
-    translate:-50% -50%;
-    width:calc(var(--page-w)*2 * 0.86);
-    height:calc(var(--page-h) * 0.14);
-    filter:blur(var(--shadow));
-    opacity:.55;
-    pointer-events:none;
-    z-index:0;
-    background:
-      radial-gradient(120% 100% at 50% 50%, rgba(0,0,0,.35), rgba(0,0,0,0) 70%);
-    /* если книга закрыта и одна обложка — подтянем ближе */
-    transition:opacity .2s ease, transform .2s ease;
-  }
-
-  /* внутренняя «виньетка» по краям каждой страницы (объём) */
-  .stf__item{ position:relative; overflow:visible; }
-  .stf__item::after{
-    content:""; position:absolute; inset:0; pointer-events:none;
-    box-shadow:
-      inset 0 0 48px rgba(0,0,0,.18),   /* по краям страниц */
-      inset 14px 0 28px rgba(0,0,0,.15),/* левый край */
-      inset -14px 0 28px rgba(0,0,0,.15);/* правый край */
-    border-radius:3px;
-  }
-
-  /* мягкая вертикальная тень в корешке — строго над книгой, не выходит наружу */
-  .gutter-shadow{
-    position:absolute; left:50%; top:calc(var(--safe) * var(--page-h));
-    width:var(--gutter);
-    height:var(--page-h);
-    translate:-50% 0;
-    pointer-events:none; z-index:2;
-    background:linear-gradient(90deg,
-      rgba(0,0,0,0) 0%,
-      rgba(0,0,0,.22) 50%,
-      rgba(0,0,0,0) 100%);
-    filter:blur(6px);
-    opacity:.65;
-  }
-  /* если показываем только обложку (первая страница слева пустая) — корешковую тень прячем */
-  .only-cover .gutter-shadow{ opacity:0; }
-
-  /* убираем скругления — как просила */
-  .stf__item canvas{ border-radius:0 !important; }
+  :root{--bg:#0a0d14;--card:#111827;--bd:#1f2937;--fg:#eaf1fb;--mut:#9fb3c8;--acc:#88f;--acc2:#7ae0ff}
+  html,body{height:100%;margin:0;background:radial-gradient(120% 100% at 50% 0,#0f1730,#0a0d14);color:var(--fg);font:14px/1.45 ui-sans-serif,system-ui,Segoe UI,Roboto,Arial}
+  .wrap{max-width:980px;margin:28px auto;padding:0 16px}
+  h1{margin:0 0 14px;font-weight:800;letter-spacing:.4px;background:linear-gradient(90deg,#7ae0ff,#9f7cff);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 0 18px #7ae0ff33}
+  .card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:14px;box-shadow:0 10px 30px #0008}
+  label{display:block;margin:8px 0 6px;color:var(--mut)}
+  textarea,input{width:100%;background:#0b1220;color:var(--fg);border:1px solid var(--bd);border-radius:10px;padding:10px}
+  textarea{min-height:150px;white-space:pre}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .btn{background:linear-gradient(90deg,#7ae0ff,#9f7cff);color:#05121c;border:0;border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:800}
+  .btn.sec{background:#0b1220;color:var(--fg);border:1px solid var(--bd)}
+  .out{font-family:ui-monospace,Consolas,Menlo,monospace;font-size:12px}
+  iframe{width:100%;height:430px;border:1px solid var(--bd);border-radius:12px;background:#000}
+  small.err{display:none;color:#ff9b9b}
 </style>
 </head>
 <body>
+<div class="wrap">
+  <h1>Teachy Witchy — Живая Книга</h1>
 
-<div class="stage">
-  <div class="book-wrap" id="wrap">
-    <div class="table-shadow" id="tableShadow"></div>
-    <div class="gutter-shadow" id="gutter"></div>
-    <div id="book"></div>
+  <div class="card">
+    <label for="imgs">Ссылки на изображения (по одной в строку, обложка — первой, задняя — последней):</label>
+    <textarea id="imgs" placeholder="https://.../cover.png
+https://.../page1.png
+https://.../page2.png
+https://.../back.png"></textarea>
+    <small id="errImgs" class="err">Добавь хотя бы одну ссылку</small>
+
+    <div class="row">
+      <div>
+        <label>Размер ОДНОЙ страницы (px):</label>
+        <div class="row">
+          <input id="w" type="number" min="100" step="1" value="600" placeholder="Ширина (w)">
+          <input id="h" type="number" min="100" step="1" value="900" placeholder="Высота (h)">
+        </div>
+        <small style="color:#9fb3c8">iframe будет шириной <b>2×w</b> и высотой <b>h</b></small>
+      </div>
+      <div>
+        <label>Скорость перелистывания, мс</label>
+        <input id="flipTime" type="number" min="100" step="50" value="800">
+        <label style="margin-top:8px">Подсказки перелистывания</label>
+        <select id="showHint">
+          <option value="false">Выключить</option>
+          <option value="true">Включить</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn" onclick="gen()">Сгенерировать ссылку + iframe</button>
+      <button class="btn sec" onclick="preview()">Превью</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <label>Ссылка на книгу:</label>
+    <textarea id="outUrl" class="out" rows="2" readonly></textarea>
+    <button class="btn sec" onclick="copy('outUrl')" style="margin:6px 0 12px">Копировать ссылку</button>
+
+    <label>iframe для Genially:</label>
+    <textarea id="outIframe" class="out" rows="5" readonly></textarea>
+    <button class="btn sec" onclick="copy('outIframe')" style="margin:6px 0 12px">Копировать iframe</button>
+
+    <label>Превью:</label>
+    <iframe id="pv" title="preview"></iframe>
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.min.js"></script>
 <script>
-(function(){
-  /** утилиты **/
-  const qsRaw = location.search.replace(/^\?/, '');
-  const params = new URLSearchParams(qsRaw.replace(/&amp;/g,'&'));
+function num(v, d){ v = parseFloat(String(v).replace(',', '.')); return Number.isFinite(v) ? v : d; }
 
-  function num(v, d){ v = parseFloat(String(v).replace(',', '.')); return Number.isFinite(v)?v:d; }
+function buildUrl(){
+  const base = new URL('viewer.html', location.href).href;
+  const lines = (document.getElementById('imgs').value||'')
+    .split(/\r?\n/)
+    .map(s=>s.trim())
+    .filter(Boolean);
 
-  function normalizeImgs(qsValue){
-    if(!qsValue) return [];
-    // 1) вернём «|» вместо %7C/%257C
-    let s = qsValue.replace(/%257C/gi,'|').replace(/%7C/gi,'|');
-    // 2) иногда весь блок дважды кодирован — попробуем снять кодировку до 2 раз
-    try{
-      const once = decodeURIComponent(s);
-      if(/https?:\/\//i.test(once)) s = once;
-      const twice = decodeURIComponent(once);
-      if(/https?:\/\//i.test(twice)) s = twice;
-    }catch(e){}
-    // 3) split и финальная чистка
-    return s.split('|')
-      .map(u=>u.trim())
-      .filter(Boolean)
-      .map(u=>{
-        // уберём случайные двойные кодировки в каждом URL
-        try{
-          const dec1 = decodeURIComponent(u);
-          if(/^https?:\/\//i.test(dec1)) return dec1;
-        }catch(e){}
-        return u;
-      });
+  if (!lines.length){
+    document.getElementById('errImgs').style.display='inline';
+    return '';
   }
+  document.getElementById('errImgs').style.display='none';
 
-  /** читаем параметры **/
-  const W = num(params.get('w'), 600);
-  const H = num(params.get('h'), 900);
-  const flipTime = Math.max(100, num(params.get('flipTime'), 800));
-  const showHint = String(params.get('showHint')).toLowerCase() === 'true';
-  const safe = Math.min(.35, Math.max(0, num(params.get('safe'), .12)));
-  const imgs = normalizeImgs(params.get('imgs'));
+  const w = num(document.getElementById('w').value, 600);
+  const h = num(document.getElementById('h').value, 900);
+  const flipTime = num(document.getElementById('flipTime').value, 800);
+  const showHint = document.getElementById('showHint').value === 'true';
 
-  if(!imgs.length){
-    document.body.innerHTML =
-      '<div style="position:fixed;inset:0;display:grid;place-items:center;color:#fff;background:#333a;text-align:center;padding:20px;border-radius:12px;">' +
-      '<div style="background:#000c;padding:12px 16px;border-radius:12px;">Пустой imgs — нет изображений.</div>' +
-      '</div>';
-    return;
-  }
+  // ВАЖНО: ссылки мы НЕ кодируем повторно. Разделитель — «|».
+  const imgs = lines.join('|');
 
-  /** применим размеры и safe-пэддинг в CSS-переменные **/
-  const root = document.documentElement.style;
-  root.setProperty('--page-w', W + 'px');
-  root.setProperty('--page-h', H + 'px');
-  root.setProperty('--safe', safe + '');
+  // «пробой кэша» — всегда добавляем v=timestamp
+  const params = new URLSearchParams();
+  params.set('v', String(Date.now()));
+  params.set('imgs', imgs);
+  params.set('w', String(w));
+  params.set('h', String(h));
+  params.set('flipTime', String(flipTime));
+  params.set('showHint', String(showHint));
+  // safe не трогаем — по умолчанию 0.12, можно добавить ручками &safe=0.2 в конце, если нужно.
 
-  /** инициализация PageFlip **/
-  const bookEl = document.getElementById('book');
-  const wrapEl = document.getElementById('wrap');
-  const tableShadow = document.getElementById('tableShadow');
+  return base + '?' + params.toString();
+}
 
-  // контент
-  const pages = imgs.map(url => ({ type: 'image', src: url }));
+function gen(){
+  const u = buildUrl(); if (!u) return;
+  const w = num(document.getElementById('w').value, 600);
+  const h = num(document.getElementById('h').value, 900);
+  document.getElementById('outUrl').value = u;
+  const iframe = `<iframe src="${u}" width="${w*2}" height="${h}" style="border:0;overflow:hidden;background:transparent" allow="autoplay"></iframe>`;
+  document.getElementById('outIframe').value = iframe;
+}
 
-  const pf = new St.PageFlip(bookEl, {
-    width: W,
-    height: H,
-    size: 'fixed',
-    useMouseEvents: true,
-    showCover: true,              // обложка как отдельная страница
-    mobileScrollSupport: false,
-    maxShadowOpacity: 0.35,
-    flippingTime: flipTime,
-    startZIndex: 3,
-    drawShadow: true
-  });
+function preview(){
+  const u = buildUrl(); if (!u) return;
+  document.getElementById('pv').src = u;
+}
 
-  pf.loadFromImages(imgs);
-
-  // подсказки (по желанию)
-  if (showHint) {
-    wrapEl.style.cursor = 'pointer';
-  }
-
-  // когда на первой странице — прячем тень корешка, оставляем «настольную»
-  function updateShadows(){
-    const state = pf.getState();
-    const onlyCover = (state.page === 0 && state.mode === 'portrait'); // в нашем «fixed» — валидно для обложки
-    wrapEl.classList.toggle('only-cover', onlyCover);
-    // подложка-тень всегда под книгой, но можно слегка подвинуть при обложке, чтобы «ближе» выглядело
-    tableShadow.style.transform = onlyCover ? 'translate(-50%,-46%)' : 'translate(-50%,-50%)';
-  }
-  pf.on('flip', updateShadows);
-  pf.on('init', updateShadows);
-
-  // защита от обрезаний: сцена прозрачная, overflow видим; ничего больше не нужно.
-})();
+function copy(id){
+  const el = document.getElementById(id);
+  el.select(); el.setSelectionRange(0, 99999);
+  try{ document.execCommand('copy'); }catch(_){}
+}
 </script>
 </body>
 </html>
