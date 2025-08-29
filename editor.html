@@ -1,145 +1,203 @@
 <!doctype html>
 <html lang="ru">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Teachy Witchy — Живая Книга (редактор)</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Teachy Witchy — Живая книга</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/css/page-flip.min.css">
 <style>
   :root{
-    --bg1:#0b0d1a; --bg2:#171a32; --card:#121528; --ink:#e9f0ff; --mut:#9fb4d6; --bd:#2a2f55; --acc:#9d7dff; --acc2:#6be1ff;
+    /* доп-пространство вокруг книги (ставлю из JS) */
+    --padX: 0px;
+    --padY: 0px;
+
+    /* расширяем область клипа во ВСЕ СТОРОНЫ, чтобы волна/обложка не резались */
+    --clipTop: -38%;
+    --clipRight: -34%;
+    --clipBottom: -38%;
+    --clipLeft: -34%;
+
+    /* оптика */
+    --spineAlpha: .42;     /* глубина у корешка */
+    --edgeVign: .85;       /* затемнение у внешних кромок */
+    --sheetDrop: .26;      /* тень от листа наружу */
   }
-  *{box-sizing:border-box}
-  html,body{height:100%;margin:0;background:radial-gradient(1200px 800px at 70% -10%, #222a6b 0%, #0a0d1c 60%), linear-gradient(180deg,var(--bg2),var(--bg1));color:var(--ink);font:15px/1.5 Inter,system-ui,Segoe UI,Roboto,Arial}
-  body{padding:28px 16px}
-  .head{
-    text-align:center;margin-bottom:18px; position:relative;
+
+  html,body{height:100%;margin:0;background:transparent;overflow:hidden}
+
+  /* Рама с прозрачным полем по периметру */
+  .book-frame{
+    position:relative;
+    width: var(--frameW);
+    height: var(--frameH);
+    margin:0 auto;
+    background:transparent;
   }
-  .title{
-    font-family: "Trebuchet MS", ui-serif; font-weight:800; letter-spacing:.5px; margin:0;
-    font-size:26px; 
-    background:radial-gradient(120% 120% at 50% -30%, #fff 0%, #d4c9ff 35%, #8fe9ff 70%, #7ed0ff 85%, #a7b6ff 100%);
-    -webkit-background-clip:text; background-clip:text; color:transparent;
-    text-shadow: 0 0 20px rgba(157,125,255,.35), 0 0 28px rgba(107,225,255,.25);
+
+  /* Блок, который держит саму книгу; тут же рисуем «столовую» тень ПОД книгой */
+  .book-clip{
+    position:absolute;
+    left:var(--padX); top:var(--padY);
+    width:var(--bookW); height:var(--bookH);
+    overflow:visible;           /* ничего не резать */
+    clip-path: inset(var(--clipTop) var(--clipRight) var(--clipBottom) var(--clipLeft));
   }
-  .subtitle{margin:6px 0 0;color:var(--mut)}
-  .wrap{max-width:840px;margin:0 auto}
-  .card{
-    background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.0));
-    border:1px solid var(--bd); border-radius:16px; padding:16px 14px;
-    backdrop-filter: blur(4px); box-shadow: 0 12px 40px rgba(20,18,62,.35), inset 0 0 60px rgba(157,125,255,.06);
+  /* Тень «книга лежит на столе»: прямо под книгой, со всех сторон */
+  .book-clip::after{
+    content:"";
+    position:absolute; left:-6%; width:112%;
+    bottom:-10px; height:46px;
+    background:
+      radial-gradient(60% 100% at 50% 0,
+        rgba(0,0,0,.42) 0, rgba(0,0,0,.25) 55%, rgba(0,0,0,0) 100%),
+      radial-gradient(120% 30% at 50% 100%,
+        rgba(0,0,0,.20) 0, rgba(0,0,0,0) 80%);
+    filter: blur(10px);
+    pointer-events:none; z-index:0;
   }
-  label{display:block;margin:10px 0 6px;color:var(--mut)}
-  textarea,input{width:100%;background:#0b0f20;color:var(--ink);border:1px solid var(--bd);border-radius:12px;padding:12px}
-  textarea{min-height:160px;white-space:pre}
-  .row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
-  @media (max-width:720px){.row{grid-template-columns:1fr}}
-  .btn{
-    appearance:none; background:linear-gradient(135deg,var(--acc),var(--acc2));
-    color:#06101a; border:0; border-radius:12px; padding:12px 16px; cursor:pointer; font-weight:800;
-    box-shadow: 0 10px 28px rgba(109,131,255,.35), inset 0 0 24px rgba(255,255,255,.25);
+
+  #flip{width:100%;height:100%;background:transparent!important}
+
+  /* страница — БЕЗ скруглений, объём рисуем виньетками */
+  .stf__page{
+    background:transparent!important;
+    overflow:visible!important;
+    border-radius:0;
+    box-shadow:
+      inset 0 0 0 1px rgba(0,0,0,.06),
+      0 14px 22px rgba(0,0,0,var(--sheetDrop));
+    will-change:transform;
   }
-  .btn:active{transform:translateY(1px)}
-  .out{font-family:ui-monospace,Consolas,Menlo,monospace;font-size:12.5px}
-  .hint{color:var(--mut);margin-top:6px}
-  .tools{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
-  .copy{background:#0b0f20;border:1px solid var(--bd);color:var(--ink);border-radius:10px;padding:10px 12px;cursor:pointer}
-  small.err{display:none;color:#ff9b9b}
-  .mt{margin-top:14px}
-  .footer{max-width:840px;margin:16px auto 0;color:#7da3d6;text-align:center;font-size:12.5px}
+  [data-density="hard"].stf__page{
+    box-shadow:
+      inset 0 0 0 1px rgba(0,0,0,.10),
+      0 18px 28px rgba(0,0,0,.24);
+  }
+
+  /* Внутренние виньетки и «уголки» (визуальные, без скругления геометрии) */
+  .stf__page::after{
+    content:""; position:absolute; inset:0; pointer-events:none; z-index:2; mix-blend-mode:multiply;
+    background:
+      /* мягкая центральная виньетка для объёма */
+      radial-gradient(115% 95% at 50% 50%, rgba(0,0,0,.22) 0, rgba(0,0,0,0) 60%),
+      /* чуть темнее у верх/низ кромок */
+      linear-gradient(to bottom, rgba(0,0,0,.18), rgba(0,0,0,0) 18%, rgba(0,0,0,0) 82%, rgba(0,0,0,.18)),
+      /* уголковые акценты (но без реального скругления) */
+      radial-gradient(110% 110% at 0% 0%,     rgba(0,0,0,.30) 0, rgba(0,0,0,0) 66%),
+      radial-gradient(110% 110% at 100% 0%,   rgba(0,0,0,.24) 0, rgba(0,0,0,0) 66%),
+      radial-gradient(110% 110% at 0% 100%,   rgba(0,0,0,.24) 0, rgba(0,0,0,0) 66%),
+      radial-gradient(110% 110% at 100% 100%, rgba(0,0,0,.30) 0, rgba(0,0,0,0) 66%);
+    background-repeat:no-repeat;
+  }
+
+  /* тёмная «борозда» корешка ЧИСТО внутри книги */
+  .stf__book{position:relative}
+  .stf__book::before{
+    content:""; position:absolute; inset:0; pointer-events:none; z-index:0;
+    background:
+      radial-gradient(90% 110% at 50% 50%,
+        rgba(0,0,0,var(--spineAlpha)) 0, rgba(0,0,0,0) 68%);
+    mask: linear-gradient(90deg, transparent 0 45%, #000 50%, transparent 55% 100%);
+    filter: blur(8px);
+  }
+
+  /* внешние кромки страниц */
+  .stf__item--left::before,
+  .stf__item--right::before{
+    content:""; position:absolute; top:0; bottom:0; width:7%;
+    pointer-events:none; mix-blend-mode:multiply; opacity:var(--edgeVign); z-index:1;
+  }
+  .stf__item--left::before { right:0; background:linear-gradient(90deg, rgba(0,0,0,.85), rgba(0,0,0,0)); }
+  .stf__item--right::before{ left:0;  background:linear-gradient(90deg, rgba(0,0,0,0), rgba(0,0,0,.85)); }
+
+  /* лёгкое «приоткрывание» обложки при ховере (корешок неподвижен) */
+  .peek .stf__item--hard.stf__item--left .stf__page{
+    transform: perspective(1200px) rotateY(-6deg) translateX(-1px);
+    transition: transform .22s ease;
+  }
+
+  /* сами картинки-страницы */
+  .pf-img{width:100%;height:100%;display:block;object-fit:cover;background:#0000}
 </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="head">
-      <h1 class="title">Teachy Witchy — Живая Книга</h1>
-      <div class="subtitle">Вставь ссылки → укажи размер страницы → получи iframe для Genially</div>
-    </div>
+<div id="root"></div>
 
-    <div class="card">
-      <label for="imgs">1) Ссылки на изображения (по одной в строку, обложка первой, задняя — последней):</label>
-      <textarea id="imgs" placeholder="https://.../cover.png
-https://.../page1.png
-https://.../page2.png
-https://.../back.png"></textarea>
-      <small id="errImgs" class="err">Добавь хотя бы одну ссылку</small>
-
-      <div class="row mt">
-        <div>
-          <label>2) Ширина страницы (px)</label>
-          <input id="w" type="number" min="100" step="1" value="600">
-        </div>
-        <div>
-          <label>3) Высота страницы (px)</label>
-          <input id="h" type="number" min="100" step="1" value="900">
-        </div>
-        <div>
-          <label>4) Скорость перелистывания, мс</label>
-          <input id="flipTime" type="number" min="100" step="50" value="800">
-        </div>
-      </div>
-
-      <div class="tools">
-        <button class="btn" onclick="gen()">Сгенерировать iframe</button>
-        <span class="hint">iframe будет шириной <b>2×w</b> и высотой <b>h</b></span>
-      </div>
-
-      <label class="mt">iframe для Genially:</label>
-      <textarea id="outIframe" class="out" rows="5" readonly></textarea>
-      <div class="tools">
-        <button class="copy" onclick="copy('outIframe')">Скопировать iframe</button>
-      </div>
-    </div>
-
-    <div class="footer">© Teachy Witchy · Живая Книга</div>
-  </div>
-
+<script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.min.js"></script>
 <script>
-function num(v, d){ v = parseFloat(String(v).replace(',', '.')); return Number.isFinite(v) ? v : d; }
+(function(){
+  const qs = new URLSearchParams(location.search);
 
-function buildUrl(){
-  const base = new URL('viewer.html', location.href).href;
+  const w = +qs.get('w') || 600;   // ширина одной страницы
+  const h = +qs.get('h') || 900;   // высота
+  const flipTime = +qs.get('flipTime') || 800;
+  const showHint = (qs.get('showHint')||'false') === 'true';
 
-  const lines = (document.getElementById('imgs').value || '')
-    .split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+  const imgs = (qs.get('imgs')||'').split('|').map(s=>s?decodeURIComponent(s):s).filter(Boolean);
+  if(!imgs.length){return toast('Пустой imgs — нет изображений.');}
 
-  if (!lines.length){
-    document.getElementById('errImgs').style.display = 'inline';
-    return '';
+  /* большое прозрачное поле по периметру для анимации */
+  const padX = Math.round(w * 0.30);
+  const padY = Math.round(h * 0.42);
+
+  const frameW = (w*2 + padX*2) + 'px';
+  const frameH = (h   + padY*2) + 'px';
+  const bookW  = (w*2) + 'px';
+  const bookH  = h + 'px';
+
+  const r = document.documentElement.style;
+  r.setProperty('--padX', padX+'px');
+  r.setProperty('--padY', padY+'px');
+  r.setProperty('--frameW', frameW);
+  r.setProperty('--frameH', frameH);
+  r.setProperty('--bookW', bookW);
+  r.setProperty('--bookH', bookH);
+
+  const frame = el('div','book-frame');
+  const clip  = el('div','book-clip');
+  const flipEl= el('div'); flipEl.id='flip';
+  clip.appendChild(flipEl); frame.appendChild(clip); byId('root').appendChild(frame);
+
+  const pf = new St.PageFlip(flipEl,{
+    width:w,height:h,size:'fixed',
+    usePortrait:false, showCover:true,
+    drawShadow:false, maxShadowOpacity:0,
+    flippingTime:flipTime,
+    autoSize:false, mobileScrollSupport:false,
+    startZIndex:5
+  });
+
+  pf.loadFromHTML([page(imgs[0], true), ...imgs.slice(1).map(u=>page(u,false))]);
+
+  // подсказки по желанию
+  if (showHint) hint(frame);
+
+  // hover-приоткрытие только когда на обложке
+  let hovering=false;
+  frame.addEventListener('mouseenter',()=>{ if(pf.getCurrentPageIndex()===0){ hovering=true; clip.classList.add('peek'); }});
+  frame.addEventListener('mouseleave',()=>{ hovering=false; clip.classList.remove('peek'); });
+  pf.on('flip',()=>{ if(!hovering) clip.classList.remove('peek'); });
+
+  /* helpers */
+  function page(url, hard){
+    const p=el('div'); p.setAttribute('data-density', hard?'hard':'soft');
+    const img=new Image(); img.className='pf-img'; img.decoding='sync'; img.loading='eager'; img.src=url;
+    p.appendChild(img); return p;
   }
-  document.getElementById('errImgs').style.display = 'none';
-
-  const w = num(document.getElementById('w').value, 600);
-  const h = num(document.getElementById('h').value, 900);
-  const flipTime = num(document.getElementById('flipTime').value, 800);
-
-  const params = new URLSearchParams();
-  params.set('imgs', lines.join('|'));   // без двойного кодирования
-  params.set('w', String(w));
-  params.set('h', String(h));
-  params.set('flipTime', String(flipTime));
-  params.set('showHint', 'false');       // подсказки убраны
-
-  return base + '?' + params.toString();
-}
-
-function gen(){
-  const u = buildUrl(); if (!u) return;
-  const w = num(document.getElementById('w').value, 600);
-  const h = num(document.getElementById('h').value, 900);
-  const iframe = `<iframe src="${u}" width="${w*2}" height="${h}" style="border:0;overflow:hidden;background:transparent" allow="autoplay"></iframe>`;
-  document.getElementById('outIframe').value = iframe;
-}
-
-async function copy(id){
-  const el = document.getElementById(id);
-  try{
-    await navigator.clipboard.writeText(el.value);
-  }catch{
-    el.select(); el.setSelectionRange(0, 99999);
-    document.execCommand('copy');
+  function el(tag,cls){const n=document.createElement(tag); if(cls) n.className=cls; return n;}
+  function byId(id){return document.getElementById(id);}
+  function hint(host){
+    const L=el('div'),R=el('div');
+    Object.assign(L.style,{position:'absolute',left:'6px',top:'50%',transform:'translateY(-50%)',font:'800 22px/1 system-ui',opacity:'.45',pointerEvents:'none'});
+    Object.assign(R.style,L.style); R.style.left='unset'; R.style.right='6px'; L.textContent='◀'; R.textContent='▶';
+    host.append(L,R);
   }
-}
+  function toast(t){
+    const b=el('div'); b.textContent=t;
+    b.style.cssText='position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#111;color:#e7eef7;padding:10px 14px;border-radius:12px;font:14px/1.2 system-ui;z-index:9999';
+    document.body.appendChild(b); setTimeout(()=>b.remove(),2600);
+  }
+})();
 </script>
 </body>
 </html>
