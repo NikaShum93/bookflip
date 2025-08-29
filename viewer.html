@@ -12,7 +12,7 @@
   /* сцена */
   .scene{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:transparent;overflow:visible}
 
-  /* обёртка с «воздухом» вокруг книги: поля задаём переменными */
+  /* обёртка с «воздухом» вокруг книги (чтобы волна и тени не резались) */
   :root{ --padX:0px; --padY:0px; --edge:12px; }
   .book-wrapper{
     position:relative; width:100%; height:100%;
@@ -22,59 +22,83 @@
   }
 
   /* рамка книги ровно 2w × h, масштабируем целиком */
-  .book-frame{ position:relative; background:transparent; overflow:visible; transform-origin:center center; will-change:transform }
+  .book-frame{ position:relative; background:transparent; overflow:visible; transform-origin:center center; will-change:transform; z-index:1 }
 
-  /* тень под разворотом */
-  .book-frame::after, .book-frame::before{
-    content:""; position:absolute; bottom:-18px; height:36px; pointer-events:none; filter:blur(10px);
-    background:radial-gradient(60% 100% at 50% 0%, rgba(0,0,0,.35) 0%, rgba(0,0,0,.22) 45%, rgba(0,0,0,.10) 75%, rgba(0,0,0,0) 100%);
+  /* тень-подложка */
+  .book-frame::after,
+  .book-frame::before{
+    content:"";
+    position:absolute;
+    bottom:-18px; height:36px;
+    pointer-events:none; filter:blur(10px);
+    z-index:0; /* под книгой */
+    background:radial-gradient(60% 100% at 50% 0%,
+      rgba(0,0,0,.35) 0%,
+      rgba(0,0,0,.22) 45%,
+      rgba(0,0,0,.10) 75%,
+      rgba(0,0,0,0) 100%);
   }
-  .book-frame::after{ left:6%; right:6%; }                   /* обычный разворот */
-  .single .book-frame::after{ display:none; }                 /* при обложке — только правая часть */
-  .single .book-frame::before{ left:var(--cover-left,50%); right:6%; display:block; }
+  /* разворот — равномерная тень */
+  .book-frame::after{ left:6%; right:6%; }
+
+  /* когда только обложка/задник — тень только справа */
+  .book-frame.single::after{ display:none; }
+  .book-frame.single::before{
+    display:block;
+    left: var(--cover-left, 50%);  /* ширина одной страницы — из JS */
+    right:6%;
+  }
 
   /* сам виджет */
   #book{width:100%;height:100%;background:transparent}
-  .stf__wrapper, .stf__block{ overflow:visible !important }   /* не резать волну */
-  .stf__page{ background:transparent !important; overflow:hidden }
+  .stf__wrapper,.stf__block{ overflow:visible !important }   /* не резать волну */
 
-  /* картинка на странице — без деформации */
+  /* контент страницы (картинка) без деформации */
   .page{ position:relative; width:100%; height:100%; background:transparent }
   .page img{ width:100%; height:100%; object-fit:contain; display:block; user-select:none; -webkit-user-drag:none; pointer-events:none }
 
-  /* объём бумаги + виньетки */
+  /* объём бумаги + виньетки/кромки */
   .stf__page{
-    box-shadow: inset 0 0 0 1px rgba(0,0,0,.06), 0 8px 14px rgba(0,0,0,.10);
+    background:transparent !important;
+    overflow:visible !important;
+    box-shadow:
+      inset 0 0 0 1px rgba(0,0,0,.08),
+      0 10px 16px rgba(0,0,0,.12);
   }
   .stf__page::after{
-    content:""; position:absolute; inset:0; pointer-events:none; mix-blend-mode:multiply;
-    background:radial-gradient(120% 100% at 50% 50%, rgba(0,0,0,.10) 0%, rgba(0,0,0,0) 60%);
+    content:""; position:absolute; inset:0; pointer-events:none; mix-blend-mode:multiply; z-index:2;
+    background:radial-gradient(120% 100% at 50% 50%,
+      rgba(0,0,0,.12) 0%,
+      rgba(0,0,0,0) 62%);
   }
+  :root{ --edge:12px; }
   .stf__page::before{
-    content:""; position:absolute; top:0; bottom:0; left:0; width:var(--edge); pointer-events:none; opacity:.45;
-    background:linear-gradient(90deg, rgba(0,0,0,.14), rgba(0,0,0,0));
+    content:""; position:absolute; top:0; bottom:0; left:0; width:var(--edge); pointer-events:none; opacity:.5; z-index:2;
+    background:linear-gradient(90deg, rgba(0,0,0,.18), rgba(0,0,0,0));
   }
   .stf__page > *::after{
-    content:""; position:absolute; top:0; bottom:0; right:0; width:var(--edge); pointer-events:none; opacity:.45;
-    background:linear-gradient(270deg, rgba(0,0,0,.14), rgba(0,0,0,0));
+    content:""; position:absolute; top:0; bottom:0; right:0; width:var(--edge); pointer-events:none; opacity:.5; z-index:2;
+    background:linear-gradient(270deg, rgba(0,0,0,.18), rgba(0,0,0,0));
   }
 
+  /* внешние виньетки разворота + корешок */
   .stf__item--left::after, .stf__item--right::after{
-    content:""; position:absolute; inset:0; pointer-events:none; mix-blend-mode:multiply;
+    content:""; position:absolute; inset:0; pointer-events:none; mix-blend-mode:multiply; z-index:1;
   }
-  .stf__item--left::after { background:linear-gradient(90deg, rgba(0,0,0,.18) 0%, rgba(0,0,0,0) 12%) }
-  .stf__item--right::after{ background:linear-gradient(90deg, rgba(0,0,0,0) 88%, rgba(0,0,0,.18) 100%) }
+  .stf__item--left::after  { background:linear-gradient(90deg, rgba(0,0,0,.20) 0%, rgba(0,0,0,0) 14%) }
+  .stf__item--right::after { background:linear-gradient(90deg, rgba(0,0,0,0) 86%, rgba(0,0,0,.20) 100%) }
 
-  /* корешковая тень — только на развороте */
   .stf__item--left::before, .stf__item--right::before{
-    content:""; position:absolute; top:0; bottom:0; width:3.2%; pointer-events:none; mix-blend-mode:multiply; opacity:.34;
+    content:""; position:absolute; top:0; bottom:0; width:3.2%;
+    pointer-events:none; mix-blend-mode:multiply; opacity:.4; z-index:1;
   }
-  .stf__item--left::before { right:0; background:linear-gradient(90deg, rgba(0,0,0,.60), rgba(0,0,0,0)) }
-  .stf__item--right::before{ left:0;  background:linear-gradient(90deg, rgba(0,0,0,0), rgba(0,0,0,.60)) }
+  .stf__item--left::before  { right:0; background:linear-gradient(90deg, rgba(0,0,0,.65), rgba(0,0,0,0)) }
+  .stf__item--right::before { left:0;  background:linear-gradient(90deg, rgba(0,0,0,0), rgba(0,0,0,.65)) }
 
-  /* когда только обложка/задник — корешковые виньетки убираем */
-  .single .stf__item::before{ display:none }
-  .single .stf__item--left::after, .single .stf__item--right::after{ background:none }
+  /* при обложке/заднике корешковые виньетки скрываем */
+  .book-frame.single .stf__item::before{ display:none; }
+  .book-frame.single .stf__item--left::after,
+  .book-frame.single .stf__item--right::after{ background:none; }
 
   /* оверлей ошибок */
   .overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.25);color:#fff;z-index:9}
@@ -170,11 +194,11 @@
     scene.addEventListener('click',e=>{const r=scene.getBoundingClientRect();safeFlip((e.clientX-r.left)<r.width/2?'prev':'next');});
     window.addEventListener('keydown',e=>{if(e.key==='ArrowLeft')safeFlip('prev'); if(e.key==='ArrowRight')safeFlip('next');});
 
-    /* === Приоткрытие обложки при наведении (только десктоп, только на 1-й странице) === */
+    /* === Приоткрытие обложки при наведении (десктоп, только на 1-й странице) === */
     const canHover = matchMedia('(hover:hover) and (pointer:fine)').matches;
     if (canHover){
       let teaseTimer=null, restoreTimer=null;
-      const TEASE = Math.max(300, Math.min(600, Math.round(flipTime*0.6))); // длительность лёгкого «вздоха»
+      const TEASE = Math.max(300, Math.min(600, Math.round(flipTime*0.6)));
       const setFlipTime = t => { try{ pf.getSettings().flippingTime = t; }catch(e){} };
 
       function teaseCover(){
@@ -184,13 +208,12 @@
         setFlipTime(TEASE);
         pf.flipNext('top');                                 // чуть приоткрыли
         teaseTimer = setTimeout(()=>{
-          pf.flipPrev('top');                              // сразу закрыли
+          pf.flipPrev('top');                              // закрыли обратно
           restoreTimer = setTimeout(()=>{
             setFlipTime(old); tease=false; syncSingle();
-            // подстраховка: гарантированно остаёмся на обложке
             if(pf.getCurrentPageIndex()!==0 && !pf.isFlipping()) pf.flipPrev('top');
           }, TEASE+40);
-        }, Math.floor(TEASE*0.38)); // меньше половины, чтобы не перелистнуть
+        }, Math.floor(TEASE*0.38));
       }
       frame.addEventListener('mouseenter', teaseCover);
       frame.addEventListener('mouseleave', ()=>{ if(teaseTimer) clearTimeout(teaseTimer); if(restoreTimer) clearTimeout(restoreTimer); });
