@@ -6,82 +6,65 @@
 <title>Teachy Witchy — Book Viewer</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/css/page-flip.min.css">
 <style>
-  /* Прозрачный фон у iframe */
   html,body{margin:0;height:100%;background:transparent;overflow:hidden}
 
-  /* Сцена: центрируем книгу, оставляем «воздух» вокруг, чтобы волна/тени не резались */
-  .scene{
-    position:relative;width:100%;height:100%;
-    display:flex;align-items:center;justify-content:center;
-    background:transparent;overflow:visible;
-  }
-  :root{ --padX:0px; --padY:0px; }
-  .wrap{
-    position:relative;width:100%;height:100%;
-    display:flex;align-items:center;justify-content:center;
-    padding:var(--padY) var(--padX); /* воздух вокруг книги */
-    overflow:visible;background:transparent;
-  }
+  .scene{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:transparent;overflow:visible}
+  :root{--padX:0px;--padY:0px}
+  .wrap{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;padding:var(--padY) var(--padX);overflow:visible;background:transparent}
 
-  /* Рамка натурального размера (2w×h), её масштабируем */
   .frame{position:relative;transform-origin:center center;will-change:transform;overflow:visible}
-
-  /* Подложка-тень ПОД книгой (мягкая, не агрессивная) — только когда разворот,
-     у обложки тени слева нет (см. .single ниже) */
+  /* тень ПОД книгой (нет у закрытой обложки) */
   .frame::after{
     content:"";position:absolute;left:7%;right:7%;bottom:-18px;height:36px;pointer-events:none;filter:blur(10px);
-    background:radial-gradient(60% 100% at 50% 0%,
-      rgba(0,0,0,.32) 0%, rgba(0,0,0,.18) 45%, rgba(0,0,0,.08) 75%, rgba(0,0,0,0) 100%);
+    background:radial-gradient(60% 100% at 50% 0%, rgba(0,0,0,.32) 0%, rgba(0,0,0,.18) 45%, rgba(0,0,0,.08) 75%, rgba(0,0,0,0) 100%);
     z-index:0;
   }
-  .frame.single::after{ display:none; } /* у закрытой обложки убираем столешничную тень */
+  .frame.single::after{display:none}
 
-  /* Сам плагин */
   #book{width:100%;height:100%;background:transparent}
   .stf__wrapper,.stf__block{overflow:visible!important;background:transparent!important}
 
-  /* Страница = чистая картинка без искажений/рамок */
   .page{position:relative;width:100%;height:100%;background:transparent}
   .page img{width:100%;height:100%;object-fit:contain;display:block;user-select:none;-webkit-user-drag:none;pointer-events:none}
 
-  /* --- ОБЪЁМ СТРАНИЦ --- */
-  /* тень вокруг самой страницы (по альфе), не по рамке контейнера */
-  .stf__item{ filter:drop-shadow(0 10px 14px rgba(0,0,0,.24)) drop-shadow(0 2px 6px rgba(0,0,0,.18)); }
-  /* лёгкая виньетка по внешним краям разворота */
-  .stf__item--left::after, .stf__item--right::after{
-    content:"";position:absolute;inset:0;pointer-events:none;mix-blend-mode:multiply;z-index:1;
-  }
-  .stf__item--left::after  { background:linear-gradient(90deg, rgba(0,0,0,.16) 0%, rgba(0,0,0,0) 14%); }
-  .stf__item--right::after { background:linear-gradient(90deg, rgba(0,0,0,0) 86%, rgba(0,0,0,.16) 100%); }
+  /* Тень вокруг САМИХ страниц (по альфе) */
+  .stf__item{filter:drop-shadow(0 10px 14px rgba(0,0,0,.24)) drop-shadow(0 2px 6px rgba(0,0,0,.18))}
 
-  /* узкая тень у корешка (даёт глубину), но только на развороте */
+  /* Узкая тень у корешка — только на развороте */
   .stf__item--left::before, .stf__item--right::before{
-    content:"";position:absolute;top:0;bottom:0;width:3%;
-    pointer-events:none;mix-blend-mode:multiply;opacity:.42;z-index:1;
+    content:"";position:absolute;top:0;bottom:0;width:3%;pointer-events:none;mix-blend-mode:multiply;opacity:.42;z-index:1
   }
-  .stf__item--left::before  { right:0; background:linear-gradient(90deg, rgba(0,0,0,.65), rgba(0,0,0,0)); }
-  .stf__item--right::before { left:0;  background:linear-gradient(90deg, rgba(0,0,0,0), rgba(0,0,0,.65)); }
+  .stf__item--left::before  {right:0;background:linear-gradient(90deg, rgba(0,0,0,.65), rgba(0,0,0,0))}
+  .stf__item--right::before {left:0; background:linear-gradient(90deg, rgba(0,0,0,0), rgba(0,0,0,.65))}
 
-  /* На одиночной странице (обложка/задник): убираем корешковую и внешнюю виньетку,
-     чтобы слева не было тени */
+  /* Внешняя лёгкая виньетка */
+  .stf__item--left::after, .stf__item--right::after{
+    content:"";position:absolute;inset:0;pointer-events:none;mix-blend-mode:multiply;z-index:1
+  }
+  .stf__item--left::after  {background:linear-gradient(90deg, rgba(0,0,0,.16) 0%, rgba(0,0,0,0) 14%)}
+  .stf__item--right::after {background:linear-gradient(90deg, rgba(0,0,0,0) 86%, rgba(0,0,0,.16) 100%)}
+
+  /* На обложке/заднике — без корешка и внешней виньетки (чтобы слева не темнело) */
   .frame.single .stf__item::before{display:none}
   .frame.single .stf__item--left::after,
-  .frame.single .stf__item--right::after{ background:none }
+  .frame.single .stf__item--right::after{background:none}
 
-  /* Чуть «помятые» уголки — очень деликатно */
+  /* Едва заметные «мятые» уголки + лёгкое скругление только внешних углов */
   .stf__page{overflow:visible!important;background:transparent!important}
   .stf__page > .corners{
-    pointer-events:none;position:absolute;inset:0;z-index:2;mix-blend-mode:multiply;opacity:.28;
+    pointer-events:none;position:absolute;inset:0;z-index:2;mix-blend-mode:multiply;opacity:.26;
     background:
       radial-gradient(28% 28% at 100% 0%, rgba(0,0,0,.18) 0%, rgba(0,0,0,0) 60%) top right/48% 48% no-repeat,
       radial-gradient(28% 28% at   0% 100%, rgba(0,0,0,.18) 0%, rgba(0,0,0,0) 60%) bottom left/48% 48% no-repeat;
   }
+  /* скругляем ТОЛЬКО внешние углы */
+  .stf__item--left  .stf__page{border-top-left-radius:10px;border-bottom-left-radius:10px;overflow:hidden}
+  .stf__item--right .stf__page{border-top-right-radius:10px;border-bottom-right-radius:10px;overflow:hidden}
 
-  /* Невидимые кликовые зоны — «железобетонно» для Genially */
+  /* кликовые зоны для Genially */
   .hit{position:absolute;top:0;bottom:0;width:50%;z-index:5;background:transparent}
   .hit.left{left:0} .hit.right{right:0}
 
-  /* Ошибки */
   .overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.25);color:#fff;z-index:9999}
   .overlay.show{display:flex}
   .overlay .panel{background:#121212;border:1px solid #333;border-radius:12px;padding:12px 14px}
@@ -91,7 +74,6 @@
   <div class="scene" id="scene">
     <div class="wrap" id="wrap">
       <div class="frame" id="frame">
-        <!-- кликовые зоны поверх книги (для Genially) -->
         <div class="hit left"  id="hitL" aria-hidden="true"></div>
         <div class="hit right" id="hitR" aria-hidden="true"></div>
         <div id="book"></div>
@@ -104,91 +86,86 @@
   <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.min.js"></script>
   <script>
   (function(){
-    const qs = new URLSearchParams(location.search);
-    const urls = (qs.get('imgs')||'')
+    const qs   = new URLSearchParams(location.search);
+    const imgs = (qs.get('imgs')||'')
       .split(/[|,]/).map(s=>s.trim()).filter(Boolean)
       .map(s=>{ try{ return decodeURIComponent(s) } catch { return s } });
-    if(!urls.length) return err('Пустой imgs — нет изображений.');
+    if(!imgs.length){ return err('Пустой imgs — нет изображений.'); }
 
+    const w = parseInt(qs.get('w'),10) || 600;
+    const h = parseInt(qs.get('h'),10) || 900;
     const flipTime = +qs.get('flipTime')>0 ? +qs.get('flipTime') : 800;
-    const pageW = parseInt(qs.get('w'),10) || 600;
-    const pageH = parseInt(qs.get('h'),10) || 900;
 
     const scene = document.getElementById('scene');
     const wrap  = document.getElementById('wrap');
     const frame = document.getElementById('frame');
     const book  = document.getElementById('book');
 
-    /* «Воздух» вокруг книги, чтобы волна и тени не резались */
-    const padX = Math.round(pageW * 0.16);
-    const padY = Math.round(pageH * 0.18);
+    /* воздух для анимации */
+    const padX = Math.round(w*0.16), padY = Math.round(h*0.18);
     wrap.style.setProperty('--padX', padX+'px');
     wrap.style.setProperty('--padY', padY+'px');
 
-    /* Размер рамки книги и масштаб под iframe */
-    frame.style.width  = (pageW*2) + 'px';
-    frame.style.height =  pageH    + 'px';
+    frame.style.width = (w*2)+'px';
+    frame.style.height= h+'px';
     function fit(){
-      const availW = scene.clientWidth, availH = scene.clientHeight;
-      const needW  = pageW*2 + padX*2, needH = pageH + padY*2;
-      const s = Math.min(availW/needW, availH/needH);
-      frame.style.transform = 'scale('+s+')';
+      const needW=w*2+padX*2, needH=h+padY*2;
+      const s=Math.min(scene.clientWidth/needW, scene.clientHeight/needH);
+      frame.style.transform='scale('+s+')';
     }
     addEventListener('resize', fit, {passive:true}); fit();
 
     /* PageFlip */
     const pf = new St.PageFlip(book,{
-      width:pageW, height:pageH, size:'fixed', autoSize:false,
+      width:w, height:h, size:'fixed', autoSize:false,
       showCover:true, usePortrait:false,
       flippingTime:flipTime, drawShadow:true, maxShadowOpacity:.85,
       mobileScrollSupport:true, useMouseEvents:true, clickEventForward:false, showHint:false
     });
 
-    /* Страницы */
-    const frag = document.createDocumentFragment();
-    urls.forEach((src,i)=>{
-      const p = document.createElement('div'); p.className='page';
-      p.setAttribute('data-density', (i===0||i===urls.length-1)?'hard':'soft');
-      const img = document.createElement('img'); img.src=src; img.alt='';
-      const deco = document.createElement('div'); deco.className='corners';
-      p.appendChild(img); p.appendChild(deco); frag.appendChild(p);
+    /* ВСТАВЛЯЕМ страницы в DOM и грузим из HTML — как в «рабочем» варианте */
+    const host=document.createElement('div');
+    imgs.forEach((src,i)=>{
+      const p=document.createElement('div'); p.className='page';
+      p.setAttribute('data-density',(i===0||i===imgs.length-1)?'hard':'soft');
+      const img=document.createElement('img'); img.src=src; img.alt='';
+      const deco=document.createElement('div'); deco.className='corners';
+      p.appendChild(img); p.appendChild(deco); host.appendChild(p);
     });
-    const nodes = Array.from(frag.children);
-    if (typeof pf.loadFromHTML==='function') pf.loadFromHTML(nodes);
-    else pf.loadFromImages(urls);
+    book.appendChild(host);
+    const nodes=book.querySelectorAll('.page');
+    (typeof pf.loadFromHTML==='function') ? pf.loadFromHTML(nodes) : pf.loadFromImages(imgs);
 
-    /* Режим single для обложки/задника — чтобы не было «левой» тени */
+    /* режим single для обложки/задника — убираем левую тень */
     function syncSingle(){
-      const i = pf.getCurrentPageIndex();
-      frame.classList.toggle('single', (i===0 || i===urls.length-1));
+      const i=pf.getCurrentPageIndex();
+      frame.classList.toggle('single',(i===0 || i===imgs.length-1));
     }
     syncSingle();
     pf.on('flip', ()=>{ syncSingle(); try{ const s=document.getElementById('flipSound'); s.currentTime=0; s.play(); }catch(e){} });
 
-    /* Надёжные клики (Genially иногда съедает события) */
+    /* клики — «железобетонно» для Genially */
     let lock=false;
     function safeFlip(dir){
-      if (lock || pf.isFlipping()) return;
-      lock = true;
-      if (dir==='prev') pf.flipPrev('top'); else pf.flipNext('top');
-      setTimeout(()=>lock=false, pf.getSettings().flippingTime + 50);
+      if(lock || pf.isFlipping()) return;
+      lock=true; (dir==='prev')?pf.flipPrev('top'):pf.flipNext('top');
+      setTimeout(()=>lock=false, pf.getSettings().flippingTime+60);
     }
-    // невидимые зоны
-    document.getElementById('hitL').addEventListener('pointerdown', e=>{ e.preventDefault(); e.stopPropagation(); safeFlip('prev'); }, {passive:false});
-    document.getElementById('hitR').addEventListener('pointerdown', e=>{ e.preventDefault(); e.stopPropagation(); safeFlip('next'); }, {passive:false});
-    // клик по сцене — дубль
+    // зоны
+    document.getElementById('hitL').addEventListener('pointerdown', e=>{e.preventDefault();e.stopPropagation();safeFlip('prev');},{passive:false});
+    document.getElementById('hitR').addEventListener('pointerdown', e=>{e.preventDefault();e.stopPropagation();safeFlip('next');},{passive:false});
+    // резерв: клик по сцене
     scene.addEventListener('click', e=>{
-      const r = scene.getBoundingClientRect();
-      const leftSide = (e.clientX - r.left) < r.width/2;
-      safeFlip(leftSide ? 'prev' : 'next');
+      const r=scene.getBoundingClientRect();
+      safeFlip((e.clientX-r.left)<r.width/2?'prev':'next');
     }, {passive:true});
-    // стрелки
+    // клавиши
     addEventListener('keydown', e=>{
-      if (e.key==='ArrowLeft')  safeFlip('prev');
-      if (e.key==='ArrowRight') safeFlip('next');
+      if(e.key==='ArrowLeft')  safeFlip('prev');
+      if(e.key==='ArrowRight') safeFlip('next');
     }, {passive:true});
 
-    function err(msg){ const o=document.getElementById('ovl'), m=document.getElementById('ovlMsg'); m.textContent=msg; o.classList.add('show'); }
+    function err(msg){const o=document.getElementById('ovl'),m=document.getElementById('ovlMsg');m.textContent=msg;o.classList.add('show')}
   })();
   </script>
 </body>
