@@ -6,68 +6,56 @@
 <title>Teachy Witchy — Book Viewer</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/css/page-flip.min.css">
 <style>
-  /* прозрачный фон */
   html,body{margin:0;height:100%;background:transparent;overflow:hidden}
 
-  /* сцена и «воздух» вокруг книги — чтобы анимация не резалась */
-  .scene{position:relative;width:100%;height:100%;background:transparent;display:flex;align-items:center;justify-content:center;overflow:visible}
+  /* сцена и «воздух» вокруг книги */
+  .scene{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:transparent;overflow:visible}
   :root{--padX:0px;--padY:0px}
   .pad{position:relative;width:100%;height:100%;padding:var(--padY) var(--padX);box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:visible}
 
-  /* рамка натурального размера 2w×h — на неё вешаем scale */
+  /* рамка натурального размера 2w×h — масштабируем её */
   .book-frame{position:relative;transform-origin:center center;will-change:transform;overflow:visible}
 
-  /* ТЕНИ ПОД КНИГОЙ (вокруг всех краёв), не кликаются */
-  .book-frame::before,
-  .book-frame::after{
-    content:""; position:absolute; inset:-6% -4%; pointer-events:none; z-index:0; filter:blur(10px);
-  }
-  /* общий мягкий ореол по периметру */
+  /* ТЕНЬ ПОД КНИГОЙ (по периметру), очень деликатная */
   .book-frame::before{
-    background:
-      radial-gradient(90% 70% at 50% 50%,
-        rgba(0,0,0,.22) 0%,
-        rgba(0,0,0,.14) 45%,
-        rgba(0,0,0,.06) 70%,
-        rgba(0,0,0,0) 85%);
-  }
-  /* лёгкое усиление снизу (естественная тень) */
-  .book-frame::after{
-    bottom:-20px;height:40px;left:8%;right:8%;
-    background:radial-gradient(60% 100% at 50% 0%,
-      rgba(0,0,0,.30) 0%, rgba(0,0,0,.16) 45%, rgba(0,0,0,.06) 75%, rgba(0,0,0,0) 100%);
+    content:""; position:absolute; inset:0; z-index:0; pointer-events:none;
+    /* прям «лежит на столе», без бурого ореола */
+    box-shadow:
+      0 22px 28px rgba(0,0,0,.20),
+      0 8px 16px  rgba(0,0,0,.12),
+      0 0 1px    rgba(0,0,0,.22);
   }
 
-  /* сам виджет */
   #book{width:100%;height:100%;background:transparent}
   .stf__wrapper,.stf__block{overflow:visible!important;background:transparent!important}
 
-  /* чистые страницы-картинки, без деформации */
+  /* страницы — чистые картинки, не деформируем */
   .page{position:relative;width:100%;height:100%;background:transparent}
   .page img{width:100%;height:100%;object-fit:contain;display:block;user-select:none;-webkit-user-drag:none;pointer-events:none}
 
-  /* узкая тень у корешка (только на развороте) */
-  .stf__item--left::before, .stf__item--right::before{
-    content:""; position:absolute; top:0; bottom:0; width:3%; pointer-events:none; mix-blend-mode:multiply; opacity:.40; z-index:1;
+  /* Узкая тень у корешка на развороте */
+  .stf__item--left::before,.stf__item--right::before{
+    content:""; position:absolute; top:0; bottom:0; width:3%;
+    pointer-events:none; mix-blend-mode:multiply; opacity:.40; z-index:1;
     background:linear-gradient(90deg, rgba(0,0,0,.60), rgba(0,0,0,0));
   }
   .stf__item--right::before{ left:0; transform:scaleX(-1); transform-origin:left }
 
-  /* лёгкая внешняя виньетка по самым краям разворота */
-  .stf__item--left::after, .stf__item--right::after{
-    content:""; position:absolute; inset:0; pointer-events:none; mix-blend-mode:multiply; opacity:.22; z-index:1;
+  /* лёгкая внешняя виньетка у ДАЛЬНИХ краёв разворота */
+  .stf__item--left::after,.stf__item--right::after{
+    content:""; position:absolute; inset:0; pointer-events:none; mix-blend-mode:multiply; opacity:.20; z-index:1;
   }
-  .stf__item--left::after  { background:linear-gradient(90deg, rgba(0,0,0,.16) 0%, rgba(0,0,0,0) 14%) }
-  .stf__item--right::after { background:linear-gradient(90deg, rgba(0,0,0,0) 86%, rgba(0,0,0,.16) 100%) }
+  .stf__item--left::after  { background:linear-gradient(90deg, rgba(0,0,0,.14) 0%, rgba(0,0,0,0) 14%) }
+  .stf__item--right::after { background:linear-gradient(90deg, rgba(0,0,0,0) 86%, rgba(0,0,0,.14) 100%) }
 
-  /* обложка/задник — без корешковой и внешней виньетки (слева не темним) */
+  /* на обложке слева тени нет */
   .single .stf__item::before{display:none}
-  .single .stf__item--left::after, .single .stf__item--right::after{ background:none }
+  .single .stf__item--left::after,.single .stf__item--right::after{background:none}
 
-  /* чуть «помятые» внешние уголки (не у корешка), не кликаются */
+  /* чуть «помятые» ВНЕШНИЕ уголки, не у корешка */
   .stf__item--left  .page::after,
   .stf__item--right .page::after{
-    content:""; position:absolute; inset:0; pointer-events:none; opacity:.30; mix-blend-mode:multiply;
+    content:""; position:absolute; inset:0; pointer-events:none; opacity:.28; mix-blend-mode:multiply;
   }
   .stf__item--left  .page::after{
     background:
@@ -100,87 +88,80 @@
   <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.min.js"></script>
   <script>
   (function(){
-    const qs   = new URLSearchParams(location.search);
-    const urls = (qs.get('imgs')||'')
-      .split(/[|,]/).map(s=>s.trim()).filter(Boolean)
-      .map(s=>{try{return decodeURIComponent(s)}catch{return s}});
+    const qs=new URLSearchParams(location.search);
+    const urls=(qs.get('imgs')||'').split(/[|,]/).map(s=>s.trim()).filter(Boolean).map(s=>{try{return decodeURIComponent(s)}catch{return s}});
+    if(!urls.length) return err('Пустой imgs — нет изображений.');
 
-    if (!urls.length) return err('Пустой imgs — нет изображений.');
+    const flipTime=+qs.get('flipTime')>0?+qs.get('flipTime'):800;
+    const pageW=parseInt(qs.get('w'),10)||600;
+    const pageH=parseInt(qs.get('h'),10)||900;
 
-    const flipTime = +qs.get('flipTime')>0 ? +qs.get('flipTime') : 800;
-    const pageW = parseInt(qs.get('w'),10) || 600;
-    const pageH = parseInt(qs.get('h'),10) || 900;
+    const scene=document.getElementById('scene');
+    const padBox=document.querySelector('.pad');
+    const frame=document.getElementById('frame');
+    const book=document.getElementById('book');
 
-    const scene = document.getElementById('scene');
-    const padBox= document.querySelector('.pad');
-    const frame = document.getElementById('frame');
-    const book  = document.getElementById('book');
+    /* воздух по краям — чтобы волна не обрезалась */
+    const padX=Math.round(pageW*0.14);
+    const padY=Math.round(pageH*0.18);
+    padBox.style.setProperty('--padX',padX+'px');
+    padBox.style.setProperty('--padY',padY+'px');
 
-    /* воздух вокруг книги (чтобы волна не резалась) */
-    const padX = Math.round(pageW*0.15);
-    const padY = Math.round(pageH*0.18);
-    padBox.style.setProperty('--padX', padX+'px');
-    padBox.style.setProperty('--padY', padY+'px');
-
-    /* рамка 2w×h и масштаб под размер iframe + воздух */
-    function setFrameSize(){
-      frame.style.width  = (pageW*2)+'px';
-      frame.style.height =  pageH   +'px';
+    function setSize(){
+      frame.style.width=(pageW*2)+'px';
+      frame.style.height=pageH+'px';
       fit();
     }
     function fit(){
-      const needW = pageW*2 + padX*2;
-      const needH = pageH   + padY*2;
-      const s = Math.min(scene.clientWidth/needW, scene.clientHeight/needH);
-      frame.style.transform = 'scale('+s+')';
+      const needW=pageW*2+padX*2, needH=pageH+padY*2;
+      const s=Math.min(scene.clientWidth/needW, scene.clientHeight/needH);
+      frame.style.transform='scale('+s+')';
     }
-    setFrameSize();
-    addEventListener('resize', fit, {passive:true});
+    setSize(); addEventListener('resize',fit,{passive:true});
 
     /* PageFlip — настройки из твоего рабочего варианта */
-    const pf = new St.PageFlip(book, {
-      width:pageW, height:pageH, size:'fixed', autoSize:false,
-      showCover:true, usePortrait:false,
-      flippingTime:flipTime, maxShadowOpacity:.85, drawShadow:true,
-      mobileScrollSupport:true, useMouseEvents:true, clickEventForward:false, showHint:false
+    const pf=new St.PageFlip(book,{
+      width:pageW,height:pageH,size:'fixed',autoSize:false,
+      showCover:true,usePortrait:false,
+      flippingTime:flipTime,maxShadowOpacity:.85,drawShadow:true,
+      mobileScrollSupport:true,useMouseEvents:true,clickEventForward:false,showHint:false
     });
 
-    /* генерим страницы */
-    const host = document.createElement('div');
+    /* страницы */
+    const host=document.createElement('div');
     urls.forEach((src,i)=>{
-      const p = document.createElement('div'); p.className='page';
+      const p=document.createElement('div'); p.className='page';
       p.setAttribute('data-density',(i===0||i===urls.length-1)?'hard':'soft');
-      const img = document.createElement('img'); img.src=src; img.alt='';
+      const img=document.createElement('img'); img.src=src; img.alt='';
       p.appendChild(img); host.appendChild(p);
     });
-    const nodes = host.querySelectorAll('.page');
-    if (typeof pf.loadFromHTML==='function') pf.loadFromHTML(nodes); else pf.loadFromImages(urls);
+    const nodes=host.querySelectorAll('.page');
+    if(typeof pf.loadFromHTML==='function') pf.loadFromHTML(nodes); else pf.loadFromImages(urls);
 
-    /* одиночный режим на обложке/заднике — убираем «левую» тень */
+    /* отключаем «левую» тень, когда книга закрыта */
     function syncSingle(){
-      const i = pf.getCurrentPageIndex();
-      frame.classList.toggle('single', (i===0 || i===urls.length-1));
+      const i=pf.getCurrentPageIndex();
+      frame.classList.toggle('single',(i===0||i===urls.length-1));
     }
-    syncSingle(); pf.on('flip', syncSingle);
+    syncSingle(); pf.on('flip',syncSingle);
 
-    /* звук и клики — как в рабочем коде (клик по сцене лево/право) */
-    const flipSound = document.getElementById('flipSound');
-    pf.on('flip', ()=>{ try{ flipSound.currentTime=0; flipSound.play(); }catch(e){} });
+    /* звук и клики — по сцене слева/справа */
+    const flipSound=document.getElementById('flipSound');
+    pf.on('flip',()=>{ try{flipSound.currentTime=0; flipSound.play();}catch(e){} });
 
     let lock=false;
     function safeFlip(dir){
-      if (lock || pf.isFlipping()) return;
+      if(lock||pf.isFlipping()) return;
       lock=true; (dir==='prev')?pf.flipPrev('top'):pf.flipNext('top');
       setTimeout(()=>lock=false, pf.getSettings().flippingTime+40);
     }
-    scene.addEventListener('click', e=>{
+    scene.addEventListener('click',e=>{
       const r=scene.getBoundingClientRect();
-      const left = (e.clientX-r.left) < r.width/2;
-      safeFlip(left?'prev':'next');
+      safeFlip((e.clientX-r.left)<r.width/2?'prev':'next');
     }, {passive:true});
-    addEventListener('keydown', e=>{
-      if (e.key==='ArrowLeft')  safeFlip('prev');
-      if (e.key==='ArrowRight') safeFlip('next');
+    addEventListener('keydown',e=>{
+      if(e.key==='ArrowLeft')  safeFlip('prev');
+      if(e.key==='ArrowRight') safeFlip('next');
     }, {passive:true});
 
     function err(msg){const o=document.getElementById('ovl'),m=document.getElementById('ovlMsg');m.textContent=msg;o.classList.add('show')}
