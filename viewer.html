@@ -3,162 +3,133 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Teachy Witchy — Book Viewer</title>
+<title>BookFlip Viewer</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/css/page-flip.min.css">
 <style>
-  /* прозрачный фон у всего iframe */
-  html,body{margin:0;height:100%;background:transparent;overflow:hidden}
+  html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:transparent}
+  #book{position:absolute;inset:0;background:transparent;overflow:hidden;
+        filter:drop-shadow(0 14px 22px rgba(0,0,0,.25));}
 
-  /* сцена центрирует книгу */
-  .scene{position:relative;width:100%;height:100%;
-         background:transparent;display:flex;align-items:center;justify-content:center}
+  /* Сброс внутренних оформлений библиотеки — чтобы не было искусственных полей */
+  .stf__wrapper,.stf__block,.stf__item,.stf__page,.stf__content{
+    background:transparent !important; margin:0 !important; padding:0 !important; border:0 !important; box-shadow:none !important;
+  }
+  .stf__page{overflow:hidden}
 
-  /* натуральный размер книги (2*w × h), на него вешаем scale */
-  .book-frame{position:relative;transform-origin:center center;will-change:transform;z-index:1}
+  /* ВИНЬЕТКИ: только ВНЕШНИЕ края (без центра!) */
+  .stf__item--left::after, .stf__item--right::after{
+    content:""; position:absolute; inset:0; pointer-events:none; mix-blend-mode:multiply;
+  }
+  /* левая страница — затемняем только внешний ЛЕВЫЙ край */
+  .stf__item--left::after{
+    background:linear-gradient(90deg,
+      rgba(0,0,0,.16) 0%,
+      rgba(0,0,0,0) 12%,
+      rgba(0,0,0,0) 100%);
+  }
+  /* правая страница — затемняем только внешний ПРАВЫЙ край */
+  .stf__item--right::after{
+    background:linear-gradient(90deg,
+      rgba(0,0,0,0) 0%,
+      rgba(0,0,0,0) 88%,
+      rgba(0,0,0,.16) 100%);
+  }
+  /* обложка/задняя (когда видна одна страница) — отключить виньетку совсем */
+  #book.single .stf__item::after{ display:none; }
 
-  /* книга внутри фрейма */
-  #book{width:100%;height:100%;background:transparent}
-
-  /* изображение страницы без деформации */
-  .page{width:100%;height:100%;position:relative}
-  .page img{width:100%;height:100%;object-fit:contain;display:block;
-            user-select:none;-webkit-user-drag:none;pointer-events:none}
-
-  /* важно: не резать «волну» перелистывания */
-  .stf__wrapper,.stf__block{overflow:visible !important}
-  .stf__item,.stf__page,.stf__content{background:transparent !important; box-shadow:none !important}
-
-  /* ЕДИНСТВЕННАЯ тень — «под книгой». Она под фреймом и не принимает клики */
-  .book-shadow{position:absolute;inset:0;z-index:0;pointer-events:none}
-  .book-shadow::after{
-    content:"";position:absolute;left:3%;right:3%;bottom:-20px;height:40px;
-    filter:blur(10px);
-    background:
-      radial-gradient(60% 120% at 50% 0%,
-        rgba(0,0,0,.35) 0%,
-        rgba(0,0,0,.20) 45%,
-        rgba(0,0,0,.10) 75%,
-        rgba(0,0,0,0) 100%);
+  /* Страница = одно изображение ровно по странице (никаких «подгонов») */
+  .page{width:100%;height:100%}
+  .page img{
+    width:100%; height:100%;
+    object-fit:contain;     /* ты отдаёшь уже в нужном размере */
+    display:block; user-select:none; -webkit-user-drag:none;
   }
 
-  /* оверлей ошибок */
+  /* Оверлей только для ошибок */
   .overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
-           background:rgba(0,0,0,.25);color:#fff;font:14px/1.4 system-ui,Segoe UI,Roboto,Arial;z-index:9999}
+    background:rgba(0,0,0,.25);color:#fff;font:14px/1.4 system-ui,Segoe UI,Roboto,Arial;z-index:9999}
   .overlay.show{display:flex}
-  .overlay .panel{background:#121212;border:1px solid #333;border-radius:12px;padding:12px 14px;max-width:720px}
+  .overlay .panel{background:#121212;border:1px solid #333;border-radius:12px;padding:16px 18px;max-width:720px}
 </style>
 </head>
 <body>
-  <div id="scene" class="scene">
-    <div id="frame" class="book-frame">
-      <div class="book-shadow"></div>
-      <div id="book"></div>
-    </div>
-    <div id="ovl" class="overlay"><div class="panel" id="ovlMsg">Ошибка</div></div>
-  </div>
 
-  <audio id="flipSound" preload="auto" src="https://raw.githubusercontent.com/NikaShum93/bookflip/main/flip.mp3"></audio>
-  <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.min.js"></script>
-  <script>
-  (function(){
-    const qs = new URLSearchParams(location.search);
+<div id="book"></div>
+<div id="ovl" class="overlay"><div class="panel" id="ovlMsg">Ошибка</div></div>
 
-    // список картинок
-    const urls = (qs.get('imgs')||'')
-      .split(/[|,]/).map(s=>s.trim()).filter(Boolean)
-      .map(s=>{try{return decodeURIComponent(s)}catch{return s}});
-    if (!urls.length) return err('Пустой imgs — нет изображений.');
+<audio id="flipSound" src="https://raw.githubusercontent.com/NikaShum93/bookflip/main/flip.mp3" preload="auto"></audio>
+<script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.min.js"></script>
 
-    // время перелистывания
-    const flipTime = +qs.get('flipTime') > 0 ? +qs.get('flipTime') : 800;
+<script>
+(function(){
+  const qs = new URLSearchParams(location.search);
 
-    // натуральный размер ОДНОЙ страницы
-    let pageW = parseInt(qs.get('w'),10) || 600;
-    let pageH = parseInt(qs.get('h'),10) || 900;
+  // ссылки на страницы (разделитель | или ,)
+  const urls = (qs.get('imgs')||'')
+    .split(/[|,]/).map(s=>s.trim()).filter(Boolean)
+    .map(s=>{try{return decodeURIComponent(s)}catch{return s}});
 
-    const scene  = document.getElementById('scene');
-    const frame  = document.getElementById('frame');
-    const bookEl = document.getElementById('book');
+  // размер ОДНОЙ страницы из редактора
+  const W = parseInt(qs.get('w'),10);
+  const H = parseInt(qs.get('h'),10);
 
-    // «воздух» вокруг книги, чтобы волна не резалась (в процентах от страницы)
-    const padX = Math.round(pageW * 0.16);
-    const padY = Math.round(pageH * 0.22);
+  if (!urls.length) return err('Пустой imgs — нет изображений.');
+  if (!(W>0 && H>0)) return err('Не передан размер страницы: w×h.');
 
-    // фрейм — строго 2*w × h
-    function setFrameSize(){
-      frame.style.width  = (pageW * 2) + 'px';
-      frame.style.height =  pageH      + 'px';
-      fitToScene();
-    }
+  const bookEl = document.getElementById('book');
 
-    // масштабируем книгу с учётом «воздуха» (книга меньше, вокруг — прозрачное поле)
-    function fitToScene(){
-      const availW = scene.clientWidth;
-      const availH = scene.clientHeight;
-      const needW  = pageW*2 + padX*2;
-      const needH  = pageH   + padY*2;
-      const scale  = Math.min(availW/needW, availH/needH);
-      frame.style.transform = 'scale(' + scale + ')';
-    }
-    setFrameSize();
-    addEventListener('resize', fitToScene, {passive:true});
+  const pf = new St.PageFlip(bookEl, {
+    width: W,                 // ширина ОДНОЙ страницы = из редактора
+    height: H,                // высота страницы = из редактора
+    size: 'fixed',            // фикс — не подгоняем
+    autoSize: false,
+    showCover: true,          // обложка отдельной страницей (твёрдая)
+    usePortrait: false,       // разворот из двух страниц
+    flippingTime: 800,
+    maxShadowOpacity: 0.6,    // волна ярче
+    drawShadow: true,
+    clickEventForward: true,
+    mobileScrollSupport: true,
+    useMouseEvents: true
+  });
 
-    // PageFlip — базовые настройки (как в рабочем варианте)
-    const pf = new St.PageFlip(bookEl, {
-      width: pageW,
-      height: pageH,
-      size: 'fixed',
-      autoSize: false,
-      showCover: true,        // обложка/задник = жёсткие
-      usePortrait: false,     // всегда разворот
-      flippingTime: flipTime,
-      drawShadow: true,
-      maxShadowOpacity: 0.85,
-      mobileScrollSupport: true,
-      useMouseEvents: true,
-      clickEventForward: false,
-      showHint: false
-    });
+  // Страницы: первая/последняя = hard, остальные = soft
+  const host = document.createElement('div');
+  urls.forEach((src,i)=>{
+    const p = document.createElement('div'); p.className='page';
+    p.setAttribute('data-density', (i===0 || i===urls.length-1) ? 'hard' : 'soft');
+    const img = document.createElement('img'); img.src=src; img.alt='';
+    p.appendChild(img); host.appendChild(p);
+  });
+  const nodes = host.querySelectorAll('.page');
+  if (typeof pf.loadFromHTML === 'function') pf.loadFromHTML(nodes);
+  else if (typeof pf.loadFromImages === 'function') pf.loadFromImages(urls);
 
-    // создаём страницы
-    const host = document.createElement('div');
-    urls.forEach((src,i)=>{
-      const p = document.createElement('div'); p.className='page';
-      p.setAttribute('data-density', (i===0 || i===urls.length-1) ? 'hard' : 'soft');
-      const img = document.createElement('img'); img.src = src; img.alt='';
-      p.appendChild(img); host.appendChild(p);
-    });
-    const nodes = host.querySelectorAll('.page');
-    if (typeof pf.loadFromHTML === 'function') pf.loadFromHTML(nodes);
-    else pf.loadFromImages(urls);
+  // звук
+  const flipSound = document.getElementById('flipSound');
+  pf.on('flip', ()=>{ try{ flipSound.currentTime=0; flipSound.play(); }catch(e){} });
 
-    // звук
-    const flipSound = document.getElementById('flipSound');
-    pf.on('flip', ()=>{ try{ flipSound.currentTime=0; flipSound.play(); }catch(e){} });
+  // клики по сторонам + стрелки
+  bookEl.addEventListener('click', (e)=>{
+    const x = e.clientX - bookEl.getBoundingClientRect().left;
+    (x < bookEl.clientWidth/2) ? pf.flipPrev('top') : pf.flipNext('top');
+  });
+  window.addEventListener('keydown', (e)=>{
+    if (e.key==='ArrowLeft') pf.flipPrev('bottom');
+    else if (e.key==='ArrowRight') pf.flipNext('bottom');
+  });
 
-    // клики/стрелки (как в «хорошо листалось»)
-    let lock=false;
-    function safeFlip(dir){
-      if (lock || pf.isFlipping()) return;
-      lock = true;
-      if (dir==='prev') pf.flipPrev('top'); else pf.flipNext('top');
-      setTimeout(()=>{ lock=false; }, pf.getSettings().flippingTime + 40);
-    }
-    scene.addEventListener('click', (e)=>{
-      const r = scene.getBoundingClientRect();
-      const x = e.clientX - r.left;
-      safeFlip(x < r.width/2 ? 'prev' : 'next');
-    });
-    addEventListener('keydown', (e)=>{
-      if (e.key==='ArrowLeft')  safeFlip('prev');
-      if (e.key==='ArrowRight') safeFlip('next');
-    }, {passive:true});
+  // скрывать виньетку на обложке/задней (без центральной «щели» и боковых полей)
+  function syncSingleState(){
+    const i = pf.getCurrentPageIndex();
+    const single = (i===0 || i===urls.length-1);  // видна одна страница
+    bookEl.classList.toggle('single', single);
+  }
+  syncSingleState();
+  pf.on('flip', syncSingleState);
 
-    function err(msg){
-      const o=document.getElementById('ovl'), m=document.getElementById('ovlMsg');
-      m.textContent=msg; o.classList.add('show');
-    }
-  })();
-  </script>
+  function err(m){ const o=document.getElementById('ovl'); const t=document.getElementById('ovlMsg'); t.textContent=m; o.classList.add('show'); }
+})();
+</script>
 </body>
 </html>
