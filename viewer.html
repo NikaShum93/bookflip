@@ -54,6 +54,15 @@
   }
   .stf__item--left::before{ right:0;  background:linear-gradient(90deg, rgba(0,0,0,.55), rgba(0,0,0,0)); }
   .stf__item--right::before{ left:0;   background:linear-gradient(90deg, rgba(0,0,0,0), rgba(0,0,0,.55)); }
+/* тень вокруг самой страницы (по альфе), не по рамке контейнера */
+  .stf__item{ filter:drop-shadow(0 10px 14px rgba(0,0,0,.24)) drop-shadow(0 2px 6px rgba(0,0,0,.18)); }
+  /* лёгкая виньетка по внешним краям разворота */
+  .stf__item--left::after, .stf__item--right::after{
+    content:"";position:absolute;inset:0;pointer-events:none;mix-blend-mode:multiply;z-index:1;
+  }
+  .stf__item--left::after  { background:linear-gradient(90deg, rgba(0,0,0,.16) 0%, rgba(0,0,0,0) 14%); }
+  .stf__item--right::after { background:linear-gradient(90deg, rgba(0,0,0,0) 86%, rgba(0,0,0,.16) 100%); }
+
 
   /* на обложке/задней — корешок «не живёт» */
   .single .stf__item::before{display:none}
