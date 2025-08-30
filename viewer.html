@@ -36,14 +36,6 @@
     left: var(--cover-left, 50%);  /* ширина одной страницы — из JS */
     right:6%;
   }
- /* Чуть «помятые» уголки — очень деликатно */
-  .stf__page{overflow:visible!important;background:transparent!important}
-  .stf__page > .corners{
-    pointer-events:none;position:absolute;inset:0;z-index:2;mix-blend-mode:multiply;opacity:.28;
-    background:
-      radial-gradient(28% 28% at 100% 0%, rgba(0,0,0,.18) 0%, rgba(0,0,0,0) 60%) top right/48% 48% no-repeat,
-      radial-gradient(28% 28% at   0% 100%, rgba(0,0,0,.18) 0%, rgba(0,0,0,0) 60%) bottom left/48% 48% no-repeat;
-  }
   /* сам виджет */
   #book{width:100%;height:100%;background:transparent}
   .stf__wrapper,.stf__block{ overflow:visible !important }   /* не резать волну */
