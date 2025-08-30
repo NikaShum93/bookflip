@@ -24,6 +24,8 @@
   /* рамка книги ровно 2w × h, масштабируем целиком */
   .book-frame{ position:relative; background:transparent; overflow:visible; transform-origin:center center; will-change:transform; z-index:1 }
 
+   /* тень вокруг самой страницы (по альфе), не по рамке контейнера */
+  .stf__item{ filter:drop-shadow(0 10px 14px rgba(0,0,0,.24)) drop-shadow(0 2px 6px rgba(0,0,0,.18)); }
   /* разворот — равномерная тень */
   .book-frame::after{ left:6%; right:6%; }
 
@@ -33,6 +35,14 @@
     display:block;
     left: var(--cover-left, 50%);  /* ширина одной страницы — из JS */
     right:6%;
+  }
+ /* Чуть «помятые» уголки — очень деликатно */
+  .stf__page{overflow:visible!important;background:transparent!important}
+  .stf__page > .corners{
+    pointer-events:none;position:absolute;inset:0;z-index:2;mix-blend-mode:multiply;opacity:.28;
+    background:
+      radial-gradient(28% 28% at 100% 0%, rgba(0,0,0,.18) 0%, rgba(0,0,0,0) 60%) top right/48% 48% no-repeat,
+      radial-gradient(28% 28% at   0% 100%, rgba(0,0,0,.18) 0%, rgba(0,0,0,0) 60%) bottom left/48% 48% no-repeat;
   }
   /* сам виджет */
   #book{width:100%;height:100%;background:transparent}
