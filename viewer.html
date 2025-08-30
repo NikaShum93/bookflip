@@ -89,9 +89,24 @@
   <script>
   (function(){
     const qs = new URLSearchParams(location.search);
-    const urls = (qs.get('imgs')||'')
-      .split(/[|,]/).map(s=>s.trim()).filter(Boolean)
-      .map(s=>{try{return decodeURIComponent(s)}catch{return s}});
+    function multiDecode(s){
+  let out = s, i = 0;
+  while (i < 3) {           // до трёх попыток
+    try {
+      const dec = decodeURIComponent(out);
+      if (dec === out) break;
+      out = dec;
+    } catch { break; }
+    i++;
+  }
+  return out;
+}
+const rawImgs = qs.get('imgs')||'';
+const urls = rawImgs
+  .split(/[|,]/)                 // поддерживаем '|' и ','
+  .map(s=>multiDecode(s.trim()))
+  .filter(Boolean);
+
     if (!urls.length) return err('Пустой imgs — нет изображений.');
 
     const flipTime = +qs.get('flipTime') > 0 ? +qs.get('flipTime') : 800;
