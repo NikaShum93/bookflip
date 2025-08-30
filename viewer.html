@@ -24,8 +24,6 @@
   /* рамка книги ровно 2w × h, масштабируем целиком */
   .book-frame{ position:relative; background:transparent; overflow:visible; transform-origin:center center; will-change:transform; z-index:1 }
 
-   /* тень вокруг самой страницы (по альфе), не по рамке контейнера */
-  .stf__item{ filter:drop-shadow(0 10px 14px rgba(0,0,0,.24)) drop-shadow(0 2px 6px rgba(0,0,0,.18)); }
   /* разворот — равномерная тень */
   .book-frame::after{ left:6%; right:6%; }
 
