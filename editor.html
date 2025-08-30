@@ -1,80 +1,106 @@
 <!doctype html>
 <html lang="ru">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Teachy Witchy — Живая Книга (генератор iframe)</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Teachy Witchy — iFrame Builder (Genially-safe)</title>
 <style>
-  :root{--bg:#0f1115;--fg:#e8eef7;--mut:#9fb3c8;--bd:#293243;--acc:#7fd2ff}
-  html,body{background:var(--bg);color:var(--fg);margin:0;font:14px/1.45 system-ui,Segoe UI,Roboto,Arial}
-  .wrap{max-width:900px;margin:28px auto;padding:0 16px}
-  h1{margin:0 0 14px}
-  label{display:block;margin:10px 0 6px;color:var(--mut)}
-  textarea,input{width:100%;background:#0b1220;border:1px solid var(--bd);color:var(--fg);border-radius:10px;padding:10px}
-  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  button{background:var(--acc);color:#032a38;border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;margin-top:10px}
-  .out{font-family:ui-monospace,Consolas,Menlo,monospace}
+  :root{--bg:#0b0f14;--fg:#e9eef5;--mut:#97a6b3;--acc:#6bdcff}
+  html,body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,Segoe UI,Roboto,Arial}
+  .wrap{max-width:920px;margin:40px auto;padding:0 16px}
+  h1{font-size:18px;margin:0 0 16px}
+  label{display:block;margin:14px 0 6px;color:var(--mut)}
+  textarea,input{width:100%;box-sizing:border-box;background:#0f1620;color:var(--fg);border:1px solid #1f2a37;border-radius:8px;padding:10px}
+  .row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  .row .cell{display:flex;flex-direction:column}
+  button{margin-top:16px;background:var(--acc);color:#002733;border:0;border-radius:10px;padding:12px 14px;font-weight:700;cursor:pointer}
+  .out{margin-top:18px}
+  .help{color:var(--mut);font-size:12px}
+  .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Teachy Witchy — Живая Книга</h1>
+  <h1>Собрать iframe для книги</h1>
 
-  <label>Ссылки на изображения (по одной в строку; обложка первая, задник последний):</label>
-  <textarea id="imgs" rows="8" placeholder="https://.../cover.png
-https://.../page1.png
-https://.../back.png"></textarea>
-
-  <div class="row">
-    <div>
-      <label>Ширина страницы (w, px)</label>
-      <input id="w" type="number" value="600" min="100" step="1">
-    </div>
-    <div>
-      <label>Высота страницы (h, px)</label>
-      <input id="h" type="number" value="900" min="100" step="1">
-    </div>
-  </div>
+  <label>Ссылки на изображения (по одной в строке; первая — обложка, последняя — задняя)</label>
+  <textarea id="urls" rows="8" placeholder="https://.../page-01.png
+https://.../page-02.png
+..."></textarea>
 
   <div class="row">
-    <div>
+    <div class="cell">
+      <label>Ширина ОДНОЙ страницы, px</label>
+      <input id="w" type="number" value="600" class="mono">
+    </div>
+    <div class="cell">
+      <label>Высота страницы, px</label>
+      <input id="h" type="number" value="900" class="mono">
+    </div>
+    <div class="cell">
       <label>Скорость перелистывания, мс</label>
-      <input id="flip" type="number" value="800" min="100" step="50">
-    </div>
-    <div>
-      <label>Cache-buster (меняется автоматически)</label>
-      <input id="v" type="text" readonly>
+      <input id="flip" type="number" value="800" class="mono">
     </div>
   </div>
 
-  <button onclick="gen()">Сгенерировать iframe</button>
+  <div class="row">
+    <div class="cell">
+      <label><input id="cache" type="checkbox" checked> Пробивать кэш (добавлять <span class="mono">v</span>)</label>
+      <span class="help">Если Genially/браузер упорно показывает старую версию — оставь включенным.</span>
+    </div>
+    <div class="cell">
+      <label><input id="scroll" type="checkbox" checked> Отключить скролл iframe</label>
+      <span class="help">Ставит <span class="mono">scrolling="no"</span>.</span>
+    </div>
+    <div class="cell">
+      <label><input id="hint" type="checkbox"> Показывать подсказку «щёлкните»</label>
+      <span class="help">У нас по умолчанию скрыта.</span>
+    </div>
+  </div>
 
-  <label>iframe для Genially:</label>
-  <textarea id="out" class="out" rows="6" readonly></textarea>
+  <button id="build">Сгенерировать iframe</button>
+
+  <div class="out">
+    <label>Готовый iframe (вставляй в Genially как «вставка → другой»)</label>
+    <textarea id="iframe" rows="6" class="mono" readonly></textarea>
+    <div class="help">Если Genially сам подменяет & на &amp; — это нормально при отображении в редакторе. Главное, чтобы в DOM было как ниже.</div>
+  </div>
 </div>
 
 <script>
-function gen(){
-  const lines=(document.getElementById('imgs').value||'')
-    .split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-  if(!lines.length){ alert('Добавь хотя бы один URL'); return; }
+  function onceEncode(url){ return encodeURIComponent(url); }   // ВАЖНО: кодируем КАЖДУЮ ссылку РОВНО ОДИН РАЗ
+  function build(){
+    const raw = document.getElementById('urls').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+    if(!raw.length){ document.getElementById('iframe').value = '— добавьте ссылки —'; return; }
 
-  const w=+document.getElementById('w').value||600;
-  const h=+document.getElementById('h').value||900;
-  const flip=+document.getElementById('flip').value||800;
-  const v=Date.now().toString(36);
-  document.getElementById('v').value=v;
+    const w   = Math.max(1, parseInt(document.getElementById('w').value,10) || 600);
+    const h   = Math.max(1, parseInt(document.getElementById('h').value,10) || 900);
+    const flip= Math.max(1, parseInt(document.getElementById('flip').value,10) || 800);
+    const v   = document.getElementById('cache').checked ? (Date.now().toString(36)) : null;
+    const showHint = document.getElementById('hint').checked ? 'true' : 'false';
+    const scrolling = document.getElementById('scroll').checked ? 'no' : 'auto';
 
-  const base='https://nikashum93.github.io/bookflip/viewer.html';
-  const params=new URLSearchParams({
-    imgs: lines.map(encodeURIComponent).join('|'),
-    w:String(w), h:String(h), flipTime:String(flip), v
-  });
-  const src=`${base}?${params.toString()}`;
+    // imgs= url1|url2|...  (каждая часть кодирована один раз)
+    const imgsParam = raw.map(onceEncode).join('|');
 
-  const iframe=`<iframe src="${src}" width="${w*2}" height="${h}" style="border:0;overflow:hidden;background:transparent" allow="autoplay"></iframe>`;
-  document.getElementById('out').value=iframe;
-}
+    const src =
+      'https://nikashum93.github.io/bookflip/viewer.html'
+      + '?imgs=' + imgsParam
+      + '&w=' + w
+      + '&h=' + h
+      + '&flipTime=' + flip
+      + '&showHint=' + showHint
+      + (v ? ('&v=' + v) : '');
+
+    const iframe =
+      '<iframe src="' + src + '"'
+      + ' width="' + (w*2) + '" height="' + h + '"'
+      + ' style="border:0;overflow:hidden;background:transparent"'
+      + ' allow="autoplay" scrolling="' + scrolling + '"></iframe>';
+
+    document.getElementById('iframe').value = iframe;
+  }
+  document.getElementById('build').addEventListener('click', build);
 </script>
 </body>
 </html>
