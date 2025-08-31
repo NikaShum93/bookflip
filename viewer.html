@@ -8,6 +8,16 @@
 <style>
   html,body{margin:0;height:100%;background:transparent;overflow:hidden}
   .scene{position:relative;width:100%;height:100%;background:transparent;display:flex;align-items:center;justify-content:center}
+
+  /* обёртка с «воздухом» (чтобы волна не резалась) */
+  :root{ --padX:0px; --padY:0px; }
+  .book-pad{
+    position:relative; transform-origin:center center; will-change:transform;
+    padding:var(--padY) var(--padX); /* прозрачный воздух вокруг */
+    background:transparent; overflow:visible;
+  }
+
+  /* сама книга (ровно 2*w × h) */
   .book-frame{position:relative;transform-origin:center center;will-change:transform}
   #book{width:100%;height:100%;background:transparent}
 
@@ -27,12 +37,8 @@
   .stf__item--left::after, .stf__item--right::after{
     content:""; position:absolute; inset:0; pointer-events:none; mix-blend-mode:multiply;
   }
-  .stf__item--left::after{
-    background:linear-gradient(90deg, rgba(0,0,0,.22) 0%, rgba(0,0,0,0) 14%);
-  }
-  .stf__item--right::after{
-    background:linear-gradient(270deg, rgba(0,0,0,.22) 0%, rgba(0,0,0,0) 14%);
-  }
+  .stf__item--left::after{  background:linear-gradient(90deg, rgba(0,0,0,.22) 0%, rgba(0,0,0,0) 14%); }
+  .stf__item--right::after{ background:linear-gradient(270deg, rgba(0,0,0,.22) 0%, rgba(0,0,0,0) 14%); }
 
   /* внутренняя тень у корешка */
   .stf__item--left::before, .stf__item--right::before{
@@ -42,7 +48,7 @@
   .stf__item--left::before{ right:0;  background:linear-gradient(90deg, rgba(0,0,0,.6), rgba(0,0,0,0)); }
   .stf__item--right::before{ left:0;   background:linear-gradient(90deg, rgba(0,0,0,0), rgba(0,0,0,.6)); }
 
-  /* тень под книгой по периметру страниц (привязана к самим страницам, не к фрейму) */
+  /* тень под книгой по периметру страниц */
   .stf__item{
     filter:
       drop-shadow(0 18px 22px rgba(0,0,0,.28))
@@ -62,8 +68,10 @@
 </head>
 <body>
   <div id="scene" class="scene">
-    <div id="frame" class="book-frame">
-      <div id="book"></div>
+    <div id="pad" class="book-pad">
+      <div id="frame" class="book-frame">
+        <div id="book"></div>
+      </div>
     </div>
     <div id="ovl" class="overlay"><div class="panel" id="ovlMsg">Ошибка</div></div>
   </div>
@@ -72,15 +80,11 @@
   <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.min.js"></script>
   <script>
   (function(){
-    // ====== robust imgs decoding (до 3 раз) ======
+    /* устойчивое декодирование imgs (до 3 раз) */
     function multiDecode(s, times=3){
       let prev=s, curr=s;
       for (let i=0;i<times;i++){
-        try{
-          curr = decodeURIComponent(prev);
-          if (curr===prev) break;
-          prev = curr;
-        }catch(e){ break; }
+        try{ curr = decodeURIComponent(prev); if (curr===prev) break; prev=curr; }catch(e){ break; }
       }
       return curr;
     }
@@ -98,29 +102,37 @@
     if (!urls.length) return err('Пустой imgs — нет изображений.');
 
     const flipTime = +qs.get('flipTime') > 0 ? +qs.get('flipTime') : 800;
+    const soundOn  = (qs.get('sound')!=='0'); // по умолчанию звук включён
 
     let pageW = parseInt(qs.get('w'),10) || 600;
     let pageH = parseInt(qs.get('h'),10) || 900;
 
     const scene  = document.getElementById('scene');
+    const pad    = document.getElementById('pad');
     const frame  = document.getElementById('frame');
     const bookEl = document.getElementById('book');
 
-    function setFrameSize(){
-      frame.style.width  = (pageW * 2) + 'px';
-      frame.style.height = pageH + 'px';
-      fitToScene();
-    }
+    /* прозрачные поля вокруг книги (проценты от страницы) */
+    const padX = Math.round(pageW * 0.16);
+    const padY = Math.round(pageH * 0.22);
+    pad.style.setProperty('--padX', padX + 'px');
+    pad.style.setProperty('--padY', padY + 'px');
+
+    /* сама книга ровно 2*w × h */
+    frame.style.width  = (pageW * 2) + 'px';
+    frame.style.height =  pageH     + 'px';
+
+    /* масштаб с учётом «воздуха» */
     function fitToScene(){
       const availW = scene.clientWidth;
       const availH = scene.clientHeight;
-      const needW  = pageW * 2;
-      const needH  = pageH;
-      const scale  = Math.min(availW / needW, availH / needH);
-      frame.style.transform = 'scale(' + scale + ')';
+      const needW  = pageW*2 + padX*2;
+      const needH  = pageH   + padY*2;
+      const scale  = Math.min(availW/needW, availH/needH);
+      pad.style.transform = 'scale(' + scale + ')';
     }
-    setFrameSize();
-    window.addEventListener('resize', fitToScene);
+    fitToScene();
+    window.addEventListener('resize', fitToScene, {passive:true});
 
     const pf = new St.PageFlip(bookEl, {
       width: pageW,
@@ -138,6 +150,7 @@
       showHint: (qs.get('showHint')==='true')
     });
 
+    /* страницы */
     const host = document.createElement('div');
     urls.forEach((src,i)=>{
       const p = document.createElement('div'); p.className='page';
@@ -149,21 +162,23 @@
     if (typeof pf.loadFromHTML === 'function') pf.loadFromHTML(nodes);
     else pf.loadFromImages(urls);
 
+    /* на обложке/заднике — мягче, без корешка */
     function syncSingle(){
       const idx = pf.getCurrentPageIndex();
       frame.classList.toggle('single', (idx===0 || idx===urls.length-1));
     }
     syncSingle(); pf.on('flip', syncSingle);
 
+    /* звук */
     const flipSound = document.getElementById('flipSound');
-    const soundOn = (qs.get('sound')!=='0'); // по умолчанию включён; editor может передать sound=0
     pf.on('flip', ()=>{ if(soundOn){ try{ flipSound.currentTime=0; flipSound.play(); }catch(e){} } });
 
+    /* клики/стрелки + анти-дабл */
     let lock=false;
     function safeFlip(dir){
       if (lock || pf.isFlipping()) return;
       lock = true;
-      if (dir==='prev') pf.flipPrev('top'); else pf.flipNext('top');
+      dir==='prev' ? pf.flipPrev('top') : pf.flipNext('top');
       setTimeout(()=>{ lock=false; }, pf.getSettings().flippingTime + 40);
     }
     scene.addEventListener('click', (e)=>{
