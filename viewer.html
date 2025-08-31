@@ -3,72 +3,48 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Teachy Witchy — Book Viewer</title>
+<title>Teachy Witchy — Book Viewer (stable)</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/css/page-flip.min.css">
 <style>
   html,body{margin:0;height:100%;background:transparent;overflow:hidden;touch-action:manipulation}
-  .scene{position:relative;width:100%;height:100%;background:transparent;display:flex;align-items:center;justify-content:center}
+  .scene{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:transparent}
 
-  /* Рамка натурального размера (2*w × h), на неё навешан scale */
+  /* Рамка натурального размера (2*w × h), масштабируем целиком */
   .book-frame{position:relative;transform-origin:center center;will-change:transform}
 
-  /* Коробка виджета */
   #book{width:100%;height:100%;background:transparent}
 
-  /* Чистим «родные» тени */
+  /* Чистим «родные» поля и тени */
   .stf__wrapper,.stf__block,.stf__content{background:transparent!important}
   .stf__item,.stf__page{background:transparent!important;box-shadow:none!important;margin:0!important;padding:0!important;border:0!important}
-  .stf__page{overflow:hidden}
+  .stf__block{pointer-events:auto!important}  /* важно для Genially */
 
-  /* Картинка на страницу без искажений */
+  /* Картинка-страница без искажений */
   .page{width:100%;height:100%;position:relative}
   .page img{width:100%;height:100%;object-fit:contain;display:block;user-select:none;-webkit-user-drag:none;pointer-events:none}
 
-  /* Виньетки по внешнему краю страниц */
-  .stf__item--left::after,.stf__item--right::after{
-    content:"";position:absolute;inset:0;pointer-events:none;mix-blend-mode:multiply
-  }
-  .stf__item--left::after {background:linear-gradient(90deg,rgba(0,0,0,.22) 0%,rgba(0,0,0,0) 14%)}
-  .stf__item--right::after{background:linear-gradient(270deg,rgba(0,0,0,.22) 0%,rgba(0,0,0,0) 14%)}
+  /* Мягкие виньетки и корешок (ненавязчиво) */
+  .stf__item--left::after,.stf__item--right::after{content:"";position:absolute;inset:0;pointer-events:none;mix-blend-mode:multiply}
+  .stf__item--left::after {background:linear-gradient(90deg, rgba(0,0,0,.18) 0%, rgba(0,0,0,0) 14%)}
+  .stf__item--right::after{background:linear-gradient(270deg, rgba(0,0,0,.18) 0%, rgba(0,0,0,0) 14%)}
+  .stf__item--left::before,.stf__item--right::before{content:"";position:absolute;top:0;bottom:0;width:3%;pointer-events:none;opacity:.35;mix-blend-mode:multiply}
+  .stf__item--left::before {right:0;background:linear-gradient(90deg, rgba(0,0,0,.6), rgba(0,0,0,0))}
+  .stf__item--right::before{left:0; background:linear-gradient(90deg, rgba(0,0,0,0), rgba(0,0,0,.6))}
+  .single .stf__item::before{display:none}
 
-  /* Тень у корешка */
-  .stf__item--left::before,.stf__item--right::before{
-    content:"";position:absolute;top:0;bottom:0;width:3%;pointer-events:none;opacity:.42;mix-blend-mode:multiply
-  }
-  .stf__item--left::before {right:0; background:linear-gradient(90deg,rgba(0,0,0,.65),rgba(0,0,0,0))}
-  .stf__item--right::before{left:0;  background:linear-gradient(90deg,rgba(0,0,0,0),rgba(0,0,0,.65))}
-
-  /* Периметрическая тень — выглядит как книга на столе (по альфе страницы) */
+  /* Тень «книга на столе» по периметру страницы (не снизу фрейма) */
   .stf__item{
     filter:
-      drop-shadow(0 18px 24px rgba(0,0,0,.28))
-      drop-shadow(0 4px 10px rgba(0,0,0,.20));
+      drop-shadow(0 16px 22px rgba(0,0,0,.26))
+      drop-shadow(0 4px 10px rgba(0,0,0,.18));
   }
-  .book-frame.single .stf__item{
-    filter:
-      drop-shadow(0 14px 18px rgba(0,0,0,.22))
-      drop-shadow(0 2px 8px rgba(0,0,0,.16));
-  }
-
-  /* Незримые кликовые зоны — железобетон для Genially */
-  .hits{position:absolute;inset:0;z-index:5;pointer-events:none}
-  .hit{position:absolute;top:0;bottom:0;width:50%;pointer-events:auto;background:transparent}
-  .hit.left{left:0}
-  .hit.right{right:0}
-
-  .overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.25);color:#fff;z-index:9}
-  .overlay.show{display:flex}
-  .overlay .panel{background:#121212;border:1px solid #333;border-radius:12px;padding:12px 14px}
 </style>
 </head>
 <body>
   <div id="scene" class="scene">
     <div id="frame" class="book-frame">
       <div id="book"></div>
-      <!-- кликабельные зоны -->
-      <div class="hits"><div class="hit left"></div><div class="hit right"></div></div>
     </div>
-    <div id="ovl" class="overlay"><div id="ovlMsg" class="panel">Ошибка</div></div>
   </div>
 
   <audio id="flipSound" preload="auto" src="https://raw.githubusercontent.com/NikaShum93/bookflip/main/flip.mp3"></audio>
@@ -76,13 +52,17 @@
   <script>
   (function(){
     const qs=new URLSearchParams(location.search);
-    const urls=(qs.get('imgs')||'')
-      .split(/[|,]/).map(s=>s.trim()).filter(Boolean)
-      .map(s=>{try{return decodeURIComponent(s)}catch{return s}});       // обычная кодировка
-    if(!urls.length) return err('Пустой imgs — нет изображений.');
+
+    // Надёжный декодинг: обычный и «двойной» (Genially иногда даёт %253A)
+    const raw = (qs.get('imgs')||'').split(/[|,]/).map(s=>s.trim()).filter(Boolean);
+    const urls = raw.map(s=>{
+      try{s=decodeURIComponent(s)}catch(e){}
+      try{s=decodeURIComponent(s)}catch(e){}  // на случай двойного кодирования
+      return s;
+    });
+    if(!urls.length) return;
 
     const flipTime=+qs.get('flipTime')>0?+qs.get('flipTime'):800;
-
     let pageW=parseInt(qs.get('w'),10)||600;
     let pageH=parseInt(qs.get('h'),10)||900;
 
@@ -90,7 +70,7 @@
     const frame=document.getElementById('frame');
     const book =document.getElementById('book');
 
-    function setFrameSize(){
+    function size(){
       frame.style.width =(pageW*2)+'px';
       frame.style.height= pageH+'px';
       fit();
@@ -99,17 +79,18 @@
       const s=Math.min(scene.clientWidth/(pageW*2), scene.clientHeight/pageH);
       frame.style.transform='scale('+s+')';
     }
-    addEventListener('resize',fit,{passive:true});
-    setFrameSize();
+    addEventListener('resize', fit, {passive:true});
+    size();
 
     const pf=new St.PageFlip(book,{
       width:pageW,height:pageH,size:'fixed',autoSize:false,
       usePortrait:false,showCover:true,
       flippingTime:flipTime,drawShadow:true,maxShadowOpacity:.85,
-      mobileScrollSupport:true,clickEventForward:false,showHint:false
+      mobileScrollSupport:true,useMouseEvents:true,clickEventForward:false,
+      showHint:false
     });
 
-    // Страницы
+    // Добавляем страницы
     const host=document.createElement('div');
     urls.forEach((src,i)=>{
       const p=document.createElement('div'); p.className='page';
@@ -120,45 +101,30 @@
     const nodes=host.querySelectorAll('.page');
     if(typeof pf.loadFromHTML==='function') pf.loadFromHTML(nodes); else pf.loadFromImages(urls);
 
-    // Состояние "single" для обложек: у корешка виньетки выключаем автоматически
-    function syncSingle(){
-      const i=pf.getCurrentPageIndex();
-      frame.classList.toggle('single',(i===0||i===urls.length-1));
-    }
-    syncSingle(); pf.on('flip',syncSingle);
+    // Тоггл single
+    function syncSingle(){ const i=pf.getCurrentPageIndex(); frame.classList.toggle('single',(i===0||i===urls.length-1)); }
+    syncSingle(); pf.on('flip', syncSingle);
 
-    // Звук + дебаунс
-    const flipSound=document.getElementById('flipSound');
-    pf.on('flip',()=>{ try{flipSound.currentTime=0; flipSound.play();}catch(e){} });
+    // Звук и защита от дабл-кликов
+    const snd=document.getElementById('flipSound'); pf.on('flip',()=>{ try{snd.currentTime=0;snd.play();}catch(e){} });
+    let lock=false; function go(dir){ if(lock||pf.isFlipping())return; lock=true; (dir==='prev'?pf.flipPrev('top'):pf.flipNext('top')); setTimeout(()=>lock=false, pf.getSettings().flippingTime+40); }
 
-    let lock=false;
-    function safeFlip(dir){
-      if(lock||pf.isFlipping()) return;
-      lock=true;
-      (dir==='prev')?pf.flipPrev('top'):pf.flipNext('top');
-      setTimeout(()=>lock=false, pf.getSettings().flippingTime+40);
-    }
-
-    // ГЛАВНОЕ: ловим pointerdown на внутренних хит-зонах (Genially-friendly)
-    const leftHit = frame.querySelector('.hit.left');
-    const rightHit= frame.querySelector('.hit.right');
-    ['pointerdown','touchstart','mousedown'].forEach(ev=>{
-      leftHit .addEventListener(ev, e=>{e.preventDefault(); safeFlip('prev');}, {passive:false});
-      rightHit.addEventListener(ev, e=>{e.preventDefault(); safeFlip('next');}, {passive:false});
+    // КЛЮЧ: слушаем pointerdown прямо на блоке книги, не на сцене (надёжно для Genially)
+    const downEvts=['pointerdown','touchstart','mousedown'];
+    downEvts.forEach(ev=>{
+      book.addEventListener(ev, (e)=>{
+        // координата относительно рамки книги (учитываем масштаб)
+        const fr=frame.getBoundingClientRect();
+        const x = (e.clientX|| (e.touches&&e.touches[0]?.clientX) || 0) - fr.left;
+        const half = fr.width/2;
+        go(x<half?'prev':'next');
+        e.preventDefault();         // обязательно — иначе контейнер Genially съедает событие
+      }, {passive:false});
     });
 
-    // На всякий — клики по всей сцене (сайт/превью)
-    scene.addEventListener('click',e=>{
-      const r=scene.getBoundingClientRect();
-      safeFlip((e.clientX-r.left)<r.width/2?'prev':'next');
-    });
+    // На всякий — стрелки
+    addEventListener('keydown',e=>{ if(e.key==='ArrowLeft')go('prev'); if(e.key==='ArrowRight')go('next'); });
 
-    addEventListener('keydown',e=>{
-      if(e.key==='ArrowLeft')  safeFlip('prev');
-      if(e.key==='ArrowRight') safeFlip('next');
-    });
-
-    function err(msg){const o=document.getElementById('ovl'),m=document.getElementById('ovlMsg');m.textContent=msg;o.classList.add('show');}
   })();
   </script>
 </body>
