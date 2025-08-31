@@ -1,201 +1,78 @@
-<!doctype html>
-<html lang="ru">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Teachy Witchy — Book Viewer</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/css/page-flip.min.css">
-<style>
-  html,body{margin:0;height:100%;background:transparent;overflow:hidden}
-  .scene{position:relative;width:100%;height:100%;background:transparent;display:flex;align-items:center;justify-content:center}
-
-  /* обёртка с «воздухом» (чтобы волна не резалась) */
-  :root{ --padX:0px; --padY:0px; }
-  .book-pad{
-    position:relative; transform-origin:center center; will-change:transform;
-    padding:var(--padY) var(--padX); /* прозрачный воздух вокруг */
-    background:transparent; overflow:visible;
-  }
-
-  /* сама книга (ровно 2*w × h) */
-  .book-frame{position:relative;transform-origin:center center;will-change:transform}
-  #book{width:100%;height:100%;background:transparent}
-
-  /* сброс библиотечных теней */
-  .stf__wrapper,.stf__block,.stf__item,.stf__page,.stf__content{
-    background:transparent !important;margin:0 !important;padding:0 !important;border:0 !important;box-shadow:none !important;
-  }
-  .stf__page{overflow:hidden}
-  .page{width:100%;height:100%;position:relative}
-  .page img{
-    width:100%;height:100%;
-    object-fit:contain;
-    display:block;user-select:none;-webkit-user-drag:none;pointer-events:none;
-  }
-
-  /* виньетки по краям страниц */
-  .stf__item--left::after, .stf__item--right::after{
-    content:""; position:absolute; inset:0; pointer-events:none; mix-blend-mode:multiply;
-  }
-  .stf__item--left::after{  background:linear-gradient(90deg, rgba(0,0,0,.22) 0%, rgba(0,0,0,0) 14%); }
-  .stf__item--right::after{ background:linear-gradient(270deg, rgba(0,0,0,.22) 0%, rgba(0,0,0,0) 14%); }
-
-  /* внутренняя тень у корешка */
-  .stf__item--left::before, .stf__item--right::before{
-    content:""; position:absolute; top:0; bottom:0; width:3%;
-    pointer-events:none; mix-blend-mode:multiply; opacity:.4;
-  }
-  .stf__item--left::before{ right:0;  background:linear-gradient(90deg, rgba(0,0,0,.6), rgba(0,0,0,0)); }
-  .stf__item--right::before{ left:0;   background:linear-gradient(90deg, rgba(0,0,0,0), rgba(0,0,0,.6)); }
-
-  /* тень под книгой по периметру страниц */
-  .stf__item{
-    filter:
-      drop-shadow(0 18px 22px rgba(0,0,0,.28))
-      drop-shadow(0 4px 10px rgba(0,0,0,.20));
-  }
-  .book-frame.single .stf__item{
-    filter:
-      drop-shadow(0 14px 18px rgba(0,0,0,.22))
-      drop-shadow(0 2px 8px rgba(0,0,0,.16));
-  }
-
-  .overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
-    background:rgba(0,0,0,.25);color:#fff;font:14px/1.4 system-ui,Segoe UI,Roboto,Arial;z-index:9999}
-  .overlay.show{display:flex}
-  .overlay .panel{background:#121212;border:1px solid #333;border-radius:12px;padding:12px 14px;max-width:720px}
-</style>
+  <!-- ТРИ кодировки подряд — костыль, но без этого перелистывание ломается -->
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Book Viewer</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      overflow: hidden;
+    }
+    #book {
+      width: 100%;
+      height: 100%;
+    }
+    canvas {
+      display: block;
+      margin: auto;
+    }
+  </style>
 </head>
 <body>
-  <div id="scene" class="scene">
-    <div id="pad" class="book-pad">
-      <div id="frame" class="book-frame">
-        <div id="book"></div>
-      </div>
-    </div>
-    <div id="ovl" class="overlay"><div class="panel" id="ovlMsg">Ошибка</div></div>
-  </div>
-
-  <audio id="flipSound" preload="auto" src="https://raw.githubusercontent.com/NikaShum93/bookflip/main/flip.mp3"></audio>
-  <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.min.js"></script>
+  <div id="book"></div>
+  <script src="turn.min.js"></script>
   <script>
-  (function(){
-    /* устойчивое декодирование imgs (до 3 раз) */
-    function multiDecode(s, times=3){
-      let prev=s, curr=s;
-      for (let i=0;i<times;i++){
-        try{ curr = decodeURIComponent(prev); if (curr===prev) break; prev=curr; }catch(e){ break; }
+    // читаем параметры из iframe
+    const params = new URLSearchParams(window.location.search);
+    const imgs = params.get("imgs")?.split("|") || [];
+    const w = parseInt(params.get("w") || "1600", 10);
+    const h = parseInt(params.get("h") || "1000", 10);
+    const flipTime = parseInt(params.get("flipTime") || "1000", 10);
+    const showHint = params.get("showHint") !== "false";
+
+    const book = document.getElementById("book");
+    book.style.width = w + "px";
+    book.style.height = h + "px";
+
+    const inner = document.createElement("div");
+    imgs.forEach(src => {
+      const page = document.createElement("div");
+      const img = document.createElement("img");
+      img.src = src;
+      img.style.width = "100%";
+      img.style.height = "100%";
+      page.appendChild(img);
+      inner.appendChild(page);
+    });
+    book.appendChild(inner);
+
+    $(inner).turn({
+      width: w,
+      height: h,
+      autoCenter: true,
+      duration: flipTime,
+      acceleration: true,
+      gradients: true,
+      elevation: 50,
+      when: {
+        turned: function(e, page) {
+          console.log("Страница:", page);
+        }
       }
-      return curr;
-    }
-    function splitImgsParam(raw){
-      const dec = multiDecode(raw);
-      const normalized = dec.replace(/%7C/gi,'|');
-      let parts = normalized.split('|');
-      if (parts.length===1) parts = normalized.split(',');
-      return parts.map(s=>s.trim()).filter(Boolean);
-    }
-
-    const qs  = new URLSearchParams(location.search);
-    const raw = qs.get('imgs') || '';
-    const urls = splitImgsParam(raw);
-    if (!urls.length) return err('Пустой imgs — нет изображений.');
-
-    const flipTime = +qs.get('flipTime') > 0 ? +qs.get('flipTime') : 800;
-    const soundOn  = (qs.get('sound')!=='0'); // по умолчанию звук включён
-
-    let pageW = parseInt(qs.get('w'),10) || 600;
-    let pageH = parseInt(qs.get('h'),10) || 900;
-
-    const scene  = document.getElementById('scene');
-    const pad    = document.getElementById('pad');
-    const frame  = document.getElementById('frame');
-    const bookEl = document.getElementById('book');
-
-    /* прозрачные поля вокруг книги (проценты от страницы) */
-    const padX = Math.round(pageW * 0.16);
-    const padY = Math.round(pageH * 0.22);
-    pad.style.setProperty('--padX', padX + 'px');
-    pad.style.setProperty('--padY', padY + 'px');
-
-    /* сама книга ровно 2*w × h */
-    frame.style.width  = (pageW * 2) + 'px';
-    frame.style.height =  pageH     + 'px';
-
-    /* масштаб с учётом «воздуха» */
-    function fitToScene(){
-      const availW = scene.clientWidth;
-      const availH = scene.clientHeight;
-      const needW  = pageW*2 + padX*2;
-      const needH  = pageH   + padY*2;
-      const scale  = Math.min(availW/needW, availH/needH);
-      pad.style.transform = 'scale(' + scale + ')';
-    }
-    fitToScene();
-    window.addEventListener('resize', fitToScene, {passive:true});
-
-    const pf = new St.PageFlip(bookEl, {
-      width: pageW,
-      height: pageH,
-      size: 'fixed',
-      autoSize: false,
-      showCover: true,
-      usePortrait: false,
-      flippingTime: flipTime,
-      maxShadowOpacity: 0.85,
-      drawShadow: true,
-      mobileScrollSupport: true,
-      useMouseEvents: true,
-      clickEventForward: false,
-      showHint: (qs.get('showHint')==='true')
     });
 
-    /* страницы */
-    const host = document.createElement('div');
-    urls.forEach((src,i)=>{
-      const p = document.createElement('div'); p.className='page';
-      p.setAttribute('data-density', (i===0 || i===urls.length-1) ? 'hard' : 'soft');
-      const img = document.createElement('img'); img.src = src; img.alt='';
-      p.appendChild(img); host.appendChild(p);
-    });
-    const nodes = host.querySelectorAll('.page');
-    if (typeof pf.loadFromHTML === 'function') pf.loadFromHTML(nodes);
-    else pf.loadFromImages(urls);
-
-    /* на обложке/заднике — мягче, без корешка */
-    function syncSingle(){
-      const idx = pf.getCurrentPageIndex();
-      frame.classList.toggle('single', (idx===0 || idx===urls.length-1));
+    if (!showHint) {
+      $(".turn-page").hide();
     }
-    syncSingle(); pf.on('flip', syncSingle);
-
-    /* звук */
-    const flipSound = document.getElementById('flipSound');
-    pf.on('flip', ()=>{ if(soundOn){ try{ flipSound.currentTime=0; flipSound.play(); }catch(e){} } });
-
-    /* клики/стрелки + анти-дабл */
-    let lock=false;
-    function safeFlip(dir){
-      if (lock || pf.isFlipping()) return;
-      lock = true;
-      dir==='prev' ? pf.flipPrev('top') : pf.flipNext('top');
-      setTimeout(()=>{ lock=false; }, pf.getSettings().flippingTime + 40);
-    }
-    scene.addEventListener('click', (e)=>{
-      const r = scene.getBoundingClientRect();
-      const x = e.clientX - r.left;
-      safeFlip(x < r.width/2 ? 'prev' : 'next');
-    });
-    window.addEventListener('keydown', (e)=>{
-      if (e.key==='ArrowLeft')  safeFlip('prev');
-      if (e.key==='ArrowRight') safeFlip('next');
-    });
-
-    function err(msg){
-      const o=document.getElementById('ovl'), m=document.getElementById('ovlMsg');
-      m.textContent=msg; o.classList.add('show');
-    }
-  })();
   </script>
 </body>
 </html>
