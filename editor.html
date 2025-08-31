@@ -3,172 +3,277 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Teachy Witchy — Живая Книга (редактор)</title>
+<title>Teachy Witchy — Живая Книга (Editor)</title>
 <style>
   :root{
-    --bg: #0e0b14;           /* тёмный фиолетовый */
-    --fg: #eef2ff;           /* светлая надпись */
-    --mut:#b5c0ff;           /* приглушённый */
-    --card:#121024;          /* карточки */
-    --bd: #2a2750;
-    --acc:#9d8cff;           /* магический акцент */
-    --neo:#5affc1;           /* неоново-зелёный */
+    --bg1:#151024;
+    --bg2:#0e1a16;
+    --vio:#9b7cff;   /* фиолетовый неон */
+    --mint:#63f0c2;  /* мятный неон */
+    --ink:#eaf3ff;
+    --glass: rgba(255,255,255,.06);
+    --glass-2: rgba(255,255,255,.10);
+    --stroke: rgba(255,255,255,.16);
   }
-  html,body{height:100%;margin:0;background:radial-gradient(120% 100% at 50% 0%, #15122b 0%, #0e0b14 60%, #0a0912 100%);color:var(--fg);font:14px/1.5 system-ui,Segoe UI,Roboto,Arial;overflow:auto}
-  .wrap{max-width:980px;margin:28px auto;padding:0 16px}
-  h1{margin:0 0 10px;font-size:22px;letter-spacing:.5px;text-shadow:0 0 12px rgba(157,140,255,.45)}
-  .sub{margin:0 0 18px;color:var(--mut)}
-  .card{background:linear-gradient(180deg, rgba(18,16,36,.85), rgba(18,16,36,.6));border:1px solid var(--bd);border-radius:16px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
-  label{display:block;margin:10px 0 6px;color:var(--mut)}
-  textarea,input,select{width:100%;background:#0b0a18;color:var(--fg);border:1px solid #2a2750;border-radius:12px;padding:10px}
-  textarea{min-height:150px;white-space:pre}
-  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  .btns{display:flex;gap:10px;flex-wrap:wrap}
-  .btn{background:linear-gradient(180deg, var(--acc), #7c6bff);color:#0d0b1a;border:0;border-radius:12px;padding:10px 14px;cursor:pointer;font-weight:800;text-shadow:0 1px 0 rgba(255,255,255,.15)}
-  .btn.sec{background:#0b0a18;color:var(--fg);border:1px solid var(--bd)}
-  .out{font-family:ui-monospace,Consolas,Menlo,monospace;font-size:12px}
-  small.err{display:none;color:#ff9b9b}
-  .hint{color:var(--mut);font-size:12px}
 
-  /* светлячки */
-  .glow{position:fixed;inset:0;pointer-events:none;z-index:-1;overflow:hidden;filter:saturate(115%)}
-  .dot{position:absolute;width:6px;height:6px;border-radius:50%;
-    background:radial-gradient(circle, #b9ffea 0%, #5affc1 40%, rgba(95,255,201,0) 70%);
-    box-shadow:0 0 12px #5affc1, 0 0 28px #5affc1;
-    animation:fly linear infinite;
-    opacity:.85}
-  @keyframes fly{
-    0%   {transform:translate3d(var(--x0),var(--y0),0) scale(.9)}
-    50%  {transform:translate3d(var(--x1),var(--y1),0) scale(1.1)}
-    100% {transform:translate3d(var(--x0),var(--y0),0) scale(.9)}
+  /* магический фон + лёгкое свечение */
+  html,body{
+    height:100%; margin:0;
+    background:
+      radial-gradient(1200px 800px at 14% 8%, rgba(155,124,255,.18), transparent 60%),
+      radial-gradient(1400px 1000px at 86% 86%, rgba(99,240,194,.14), transparent 60%),
+      linear-gradient(135deg, var(--bg1), var(--bg2));
+    color: var(--ink);
+    font: 16px/1.45 Inter, system-ui, Segoe UI, Roboto, Arial;
   }
+
+  /* плавающие светлячки */
+  .fireflies{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:0}
+  .fireflies span{
+    position:absolute;width:6px;height:6px;border-radius:50%;
+    background:radial-gradient(circle,#d8ffe9 0%, rgba(216,255,233,.18) 60%, transparent 70%);
+    box-shadow:
+      0 0 12px 4px rgba(140,255,214,.55),
+      0 0 26px 10px rgba(155,124,255,.22);
+    animation:fly linear infinite, twinkle 2.7s ease-in-out infinite;
+    opacity:.85; filter: drop-shadow(0 0 4px #8e79ff);
+  }
+  @keyframes twinkle { 50%{ transform: scale(1.35) } }
+  @keyframes fly {
+    0%   { transform: translate3d(var(--x0), var(--y0), 0) }
+    100% { transform: translate3d(var(--x1), var(--y1), 0) }
+  }
+
+  .wrap{position:relative; z-index:1; max-width:980px; margin:34px auto; padding:0 16px}
+  h1{margin:0 0 16px; display:flex; align-items:center; gap:12px; letter-spacing:.2px}
+  .brand{
+    font-weight:900; font-size:22px;
+    background:linear-gradient(90deg,var(--vio),var(--mint));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    text-shadow: 0 0 18px rgba(155,124,255,.28), 0 0 24px rgba(99,240,194,.18);
+  }
+  .badge{
+    font-size:12px; font-weight:700; padding:.3rem .7rem; border-radius:999px;
+    color:#081015; background:linear-gradient(90deg,var(--vio),var(--mint));
+    box-shadow:0 6px 18px rgba(155,124,255,.28), 0 6px 22px rgba(99,240,194,.18);
+  }
+
+  .card{
+    background:linear-gradient(180deg,var(--glass),var(--glass-2));
+    border:1px solid var(--stroke);
+    border-radius:18px; padding:18px;
+    box-shadow: 0 24px 68px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.06);
+    backdrop-filter: blur(10px);
+  }
+
+  .mini{font-weight:800; font-size:12px; letter-spacing:.12em; text-transform:uppercase; color:#c7c0ff; margin:6px 0 6px}
+  label{font-size:13px; opacity:.85}
+
+  textarea, input[type="number"]{
+    width:100%; box-sizing:border-box; border-radius:12px;
+    border:1px solid rgba(255,255,255,.18);
+    background:rgba(6,8,12,.35); color:var(--ink); padding:12px; outline:none;
+  }
+  textarea{min-height:140px; resize:vertical}
+
+  .row{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+  @media (max-width:840px){ .row{ grid-template-columns:1fr } }
+
+  .grid-3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px}
+
+  .switch{display:flex; align-items:center; gap:10px; margin-top:8px}
+  .switch input{width:18px; height:18px}
+
+  .hint{font-size:12px; opacity:.75; margin-top:6px}
+
+  .actions{display:flex; gap:10px; flex-wrap:wrap; margin-top:14px}
+  .btn{
+    appearance:none; border:none; border-radius:12px; padding:11px 14px; cursor:pointer; font-weight:800;
+    color:#0e1020;
+    background:linear-gradient(90deg,var(--vio),var(--mint));
+    box-shadow:0 8px 24px rgba(99,240,194,.25), 0 3px 10px rgba(155,124,255,.25);
+  }
+  .btn.ghost{background:transparent;color:#e9ecf6;border:1px solid rgba(255,255,255,.22)}
+  .btn.small{padding:8px 10px; font-size:13px}
+
+  .pill{
+    background:rgba(155,124,255,.14);
+    border:1px solid rgba(155,124,255,.35);
+    padding:.28rem .65rem; border-radius:999px; font-size:12px
+  }
+  .ok{color:#b8ffe0}
+  .warn{color:#ffe2b8}
+
+  .out{margin-top:16px}
+  pre{
+    white-space:pre-wrap; word-break:break-word;
+    background:rgba(0,0,0,.35); border:1px dashed rgba(255,255,255,.2);
+    padding:12px; border-radius:12px
+  }
+  .copy-row{display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:6px 0 14px}
 </style>
 </head>
 <body>
-<div class="glow" id="glow"></div>
+<div class="fireflies" id="fx"></div>
 
 <div class="wrap">
-  <h1>Teachy Witchy — Живая Книга</h1>
-  <p class="sub">Собери ссылку и iframe для Genially. Каждая страница — отдельная картинка, порядок = как в списке.</p>
+  <h1><span class="brand">Живая Книга</span> <span class="badge">Teachy Witchy</span></h1>
 
   <div class="card">
-    <label for="imgs">1) Ссылки на изображения (по одной в строку, обложка первой, задняя — последней):</label>
-    <textarea id="imgs" placeholder="https://.../cover.png
-https://.../page1.png
-https://.../page2.png
-https://.../back.png"></textarea>
-    <small id="errImgs" class="err">Нужно добавить хотя бы одну ссылку</small>
+    <div class="mini">1) Изображения страниц</div>
+    <label>Ссылки (каждая с новой строки, обложка — первая, задник — последняя)</label>
+    <textarea id="urls" placeholder="https://.../page-01.png
+https://.../page-02.png
+https://.../page-03.png"></textarea>
 
-    <div class="row">
+    <div class="row" style="margin-top:10px">
       <div>
-        <label>2) Размер ОДНОЙ страницы (px):</label>
-        <div class="row">
-          <input id="w" type="number" min="100" step="1" value="600" placeholder="Ширина (w)">
-          <input id="h" type="number" min="100" step="1" value="900" placeholder="Высота (h)">
+        <div class="mini">2) Размер одной страницы (px)</div>
+        <div class="grid-3">
+          <div><label>Ширина (w)</label><input id="w" type="number" value="600" min="200" step="1"/></div>
+          <div><label>Высота (h)</label><input id="h" type="number" value="900" min="200" step="1"/></div>
+          <div>
+            <label>&nbsp;</label>
+            <button class="btn ghost" id="safeBtn" type="button" title="Подогнать к безопасному размеру с сохранением пропорций">Сделать безопасным</button>
+          </div>
         </div>
-        <p class="hint">iframe будет шириной <b>2×w</b> и высотой <b>h</b>. Пример: 600×900 → iframe 1200×900</p>
+        <div class="hint">Безопасно: ширина книги (2×w) ≤ <b>1800</b>, h ≤ <b>1200</b>. Формат остаётся прежним.</div>
       </div>
       <div>
-        <label>3) Скорость перелистывания, мс</label>
-        <input id="flipTime" type="number" min="100" step="50" value="800">
-        <label style="margin-top:10px">Подсказки перелистывания</label>
-        <select id="showHint">
-          <option value="false" selected>Выключить</option>
-          <option value="true">Включить</option>
-        </select>
-
-        <label style="margin-top:10px;display:flex;gap:8px;align-items:center">
-          <input id="mute" type="checkbox"> Отключить звук перелистывания
-        </label>
+        <div class="mini">3) Анимация и звук</div>
+        <label>Скорость перелистывания, мс</label>
+        <input id="flip" type="number" value="800" min="200" step="50"/>
+        <div class="switch">
+          <input id="sound" type="checkbox" checked/>
+          <label for="sound">Воспроизводить звук перелистывания</label>
+        </div>
+        <div class="switch">
+          <input id="hint" type="checkbox"/>
+          <label for="hint">Подсказки «листай» (showHint)</label>
+        </div>
       </div>
     </div>
 
-    <div class="btns" style="margin-top:12px">
-      <button class="btn" onclick="gen()">Сгенерировать ссылку + iframe</button>
-      <button class="btn sec" onclick="clearAll()">Очистить</button>
+    <div class="actions">
+      <button class="btn" id="gen" type="button">Сгенерировать iframe</button>
+      <span id="status" class="pill">Готово к генерации</span>
+    </div>
+
+    <div class="out">
+      <div class="mini">iframe для Genially</div>
+      <pre id="iframeBox"></pre>
+      <div class="copy-row">
+        <button class="btn small" type="button" onclick="copyText('iframeBox')">Копировать iframe</button>
+      </div>
     </div>
   </div>
 
-  <div class="card" style="margin-top:14px">
-    <label>Ссылка на книгу:</label>
-    <textarea id="outUrl" class="out" rows="2" readonly></textarea>
-    <button class="btn sec" onclick="copy('outUrl')" style="margin:8px 0 12px">Копировать ссылку</button>
-
-    <label>iframe для Genially:</label>
-    <textarea id="outIframe" class="out" rows="5" readonly></textarea>
-    <button class="btn sec" onclick="copy('outIframe')" style="margin-top:8px">Копировать iframe</button>
-  </div>
+  <div class="hint">Если Genially плохо реагирует на клики, нажми «Сделать безопасным» — размеры станут входить в лимиты, а пропорции сохранятся.</div>
 </div>
 
 <script>
 /* === светлячки === */
 (function fireflies(){
-  const wrap = document.getElementById('glow');
-  const N = 16;
-  for (let i=0;i<N;i++){
-    const d=document.createElement('div');
-    d.className='dot';
-    const x0 = Math.random()*100, y0 = Math.random()*100;
-    const x1 = Math.min(100, Math.max(0, x0 + (Math.random()*40-20)));
-    const y1 = Math.min(100, Math.max(0, y0 + (Math.random()*30-15)));
-    d.style.setProperty('--x0', x0+'vw');
-    d.style.setProperty('--y0', y0+'vh');
-    d.style.setProperty('--x1', x1+'vw');
-    d.style.setProperty('--y1', y1+'vh');
-    d.style.animationDuration = (18 + Math.random()*10)+'s';
-    d.style.animationDelay = (-Math.random()*10)+'s';
-    wrap.appendChild(d);
+  const fx = document.getElementById('fx');
+  const N = 28;
+  for(let i=0;i<N;i++){
+    const s = document.createElement('span');
+    const x0 = Math.random()*100|0, y0 = Math.random()*100|0;
+    const x1 = (x0 + (Math.random()*60-30))|0;
+    const y1 = (y0 + (Math.random()*40-20))|0;
+    s.style.setProperty('--x0', x0+'vw');
+    s.style.setProperty('--y0', y0+'vh');
+    s.style.setProperty('--x1', x1+'vw');
+    s.style.setProperty('--y1', y1+'vh');
+    s.style.animationDuration = (18+Math.random()*16).toFixed(1)+'s';
+    s.style.animationDelay = (-Math.random()*18).toFixed(1)+'s';
+    fx.appendChild(s);
   }
 })();
 
-/* === утилиты === */
-function num(v, d){ v = parseFloat(String(v).replace(',', '.')); return Number.isFinite(v) ? v : d; }
-function copy(id){ const el=document.getElementById(id); el.select(); el.setSelectionRange(0,99999); try{document.execCommand('copy')}catch(e){} }
-function clearAll(){
-  document.getElementById('imgs').value='';
-  document.getElementById('outUrl').value='';
-  document.getElementById('outIframe').value='';
+/* === редактор === */
+const MAX_BOOK_W = 1800;  // две страницы вместе
+const MAX_H       = 1200; // высота одной страницы
+const urlsEl = document.getElementById('urls');
+const wEl    = document.getElementById('w');
+const hEl    = document.getElementById('h');
+const flipEl = document.getElementById('flip');
+const soundEl= document.getElementById('sound');
+const hintEl = document.getElementById('hint');
+const statusEl=document.getElementById('status');
+
+function safeResize(){
+  let w = Math.max(1, parseInt(wEl.value||'0',10));
+  let h = Math.max(1, parseInt(hEl.value||'0',10));
+  const bookW = 2*w;
+
+  if (bookW<=MAX_BOOK_W && h<=MAX_H){
+    statusEl.textContent = 'Размер уже безопасный';
+    statusEl.style.background = 'rgba(99,240,194,.16)';
+    statusEl.style.border     = '1px solid rgba(99,240,194,.38)';
+    return;
+  }
+  const scale = Math.min(MAX_BOOK_W/(2*w), MAX_H/h);
+  const nw = Math.floor(w*scale);
+  const nh = Math.floor(h*scale);
+
+  wEl.value = nw; hEl.value = nh;
+  statusEl.textContent = `Сжали до ${nw}×${nh} (формат сохранён)`;
+  statusEl.style.background = 'rgba(99,240,194,.16)';
+  statusEl.style.border     = '1px solid rgba(99,240,194,.38)';
+}
+document.getElementById('safeBtn').addEventListener('click', safeResize);
+
+function singleEncode(url){
+  // снимаем возможное двойное кодирование и кодируем РОВНО один раз
+  try { return encodeURIComponent(decodeURIComponent(url)); }
+  catch { return encodeURIComponent(url); }
 }
 
-/* === генерация === */
-function buildUrl(){
-  const base = new URL('viewer.html', location.href).href;
-
-  const lines = (document.getElementById('imgs').value||'')
-    .split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-  if (!lines.length){
-    document.getElementById('errImgs').style.display='inline';
-    return '';
-  }
-  document.getElementById('errImgs').style.display='none';
-
-  const w = num(document.getElementById('w').value, 600);
-  const h = num(document.getElementById('h').value, 900);
-  const flipTime = num(document.getElementById('flipTime').value, 800);
-  const showHint = document.getElementById('showHint').value === 'true';
-  const mute = document.getElementById('mute').checked ? '1' : '0';
-
-  const params = new URLSearchParams();
-  // очень важно: кодируем КАЖДУЮ ссылку и соединяем одним |
-  params.set('imgs', lines.map(encodeURIComponent).join('|'));
-  params.set('w', String(w));
-  params.set('h', String(h));
-  params.set('flipTime', String(flipTime));
-  params.set('showHint', String(showHint));
-  params.set('mute', mute); // только флаг; звук всегда flip.mp3 в viewer
-
-  return base + '?' + params.toString();
+function copyText(id){
+  const el = document.getElementById(id);
+  const r = document.createRange();
+  r.selectNodeContents(el);
+  const sel = window.getSelection();
+  sel.removeAllRanges(); sel.addRange(r);
+  try{ document.execCommand('copy'); }catch(e){}
+  sel.removeAllRanges();
 }
 
 function gen(){
-  const u = buildUrl(); if (!u) return;
-  const w = num(document.getElementById('w').value, 600);
-  const h = num(document.getElementById('h').value, 900);
+  const raw = urlsEl.value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  if(!raw.length){ alert('Добавь хотя бы одну ссылку на изображение.'); return; }
 
-  document.getElementById('outUrl').value = u;
-  const iframe = `<iframe src="${u}" width="${w*2}" height="${h}" style="border:0;overflow:hidden;background:transparent" allow="autoplay" scrolling="no"></iframe>`;
-  document.getElementById('outIframe').value = iframe;
+  const imgsParam = raw.map(singleEncode).join('|');
+  const w = parseInt(wEl.value,10)||600;
+  const h = parseInt(hEl.value,10)||900;
+  const flip = Math.max(200, parseInt(flipEl.value,10)||800);
+  const sound = soundEl.checked ? 1 : 0;
+  const showHint = hintEl.checked ? 'true' : 'false';
+  const v = Date.now(); // пробиваем кэш
+
+  const base = 'https://nikashum93.github.io/bookflip/viewer.html';
+  const q = `?imgs=${imgsParam}&w=${w}&h=${h}&flipTime=${flip}&showHint=${showHint}&sound=${sound}&v=${v}`;
+  const link = base + q;
+
+  const iframe = `<iframe src="${link}" width="${2*w}" height="${h}" style="border:0;overflow:hidden;background:transparent" allow="autoplay" scrolling="no"></iframe>`;
+  document.getElementById('iframeBox').textContent = iframe;
+
+  // статус размеров
+  const bookW = 2*w;
+  if (bookW>MAX_BOOK_W || h>MAX_H){
+    statusEl.textContent = `⚠️ крупновато (${bookW}×${h}). Лучше нажать «Сделать безопасным».`;
+    statusEl.classList.remove('ok'); statusEl.classList.add('warn');
+    statusEl.style.background = 'rgba(255,214,170,.14)';
+    statusEl.style.border     = '1px solid rgba(255,214,170,.38)';
+  }else{
+    statusEl.textContent = '✅ Готово! Размер безопасный.';
+    statusEl.classList.remove('warn'); statusEl.classList.add('ok');
+    statusEl.style.background = 'rgba(99,240,194,.16)';
+    statusEl.style.border     = '1px solid rgba(99,240,194,.42)';
+  }
 }
+document.getElementById('gen').addEventListener('click', gen);
 </script>
 </body>
 </html>
