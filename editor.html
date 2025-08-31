@@ -1,106 +1,232 @@
 <!doctype html>
 <html lang="ru">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Teachy Witchy — iFrame Builder (Genially-safe)</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Teachy Witchy — Живая Книга (Editor)</title>
 <style>
-  :root{--bg:#0b0f14;--fg:#e9eef5;--mut:#97a6b3;--acc:#6bdcff}
-  html,body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,Segoe UI,Roboto,Arial}
-  .wrap{max-width:920px;margin:40px auto;padding:0 16px}
-  h1{font-size:18px;margin:0 0 16px}
-  label{display:block;margin:14px 0 6px;color:var(--mut)}
-  textarea,input{width:100%;box-sizing:border-box;background:#0f1620;color:var(--fg);border:1px solid #1f2a37;border-radius:8px;padding:10px}
-  .row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
-  .row .cell{display:flex;flex-direction:column}
-  button{margin-top:16px;background:var(--acc);color:#002733;border:0;border-radius:10px;padding:12px 14px;font-weight:700;cursor:pointer}
-  .out{margin-top:18px}
-  .help{color:var(--mut);font-size:12px}
-  .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+  :root{
+    --bg1:#171426;
+    --bg2:#12221a;
+    --vio:#8a6bff;
+    --mint:#5ce0b5;
+    --ink:#e8f5ff;
+    --glass: rgba(255,255,255,.08);
+    --glass-2: rgba(255,255,255,.12);
+  }
+  html,body{height:100%;margin:0;background: radial-gradient(1200px 800px at 15% 10%, rgba(138,107,255,.18), transparent 60%),
+                                 radial-gradient(1400px 1000px at 85% 85%, rgba(92,224,181,.12), transparent 60%),
+                                 linear-gradient(135deg, var(--bg1), var(--bg2)); color:#e9ecf6; font:16px/1.45 Inter,system-ui,Segoe UI,Roboto,Arial}
+  .wrap{max-width:980px;margin:32px auto;padding:0 16px;position:relative}
+  h1{font-weight:800;letter-spacing:.2px;margin:0 0 18px;display:flex;gap:10px;align-items:center}
+  h1 .tw{font-size:15px;font-weight:700;padding:.25rem .6rem;border-radius:999px;background:linear-gradient(90deg,#7c6bff,#5ce0b5);color:#101014}
+  .card{background:linear-gradient(180deg,var(--glass),var(--glass-2));
+        border:1px solid rgba(255,255,255,.15); box-shadow:0 20px 60px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.08);
+        border-radius:18px; padding:18px; backdrop-filter: blur(10px);}
+  .row{display:grid;grid-template-columns:1fr 1fr; gap:14px}
+  @media (max-width:840px){.row{grid-template-columns:1fr}}
+  label{font-size:13px;opacity:.85}
+  textarea, input[type="text"], input[type="number"]{
+    width:100%; box-sizing:border-box; border-radius:12px; border:1px solid rgba(255,255,255,.18);
+    background:rgba(6,8,12,.35); color:var(--ink); padding:12px 12px; outline:none;
+  }
+  textarea{min-height:140px;resize:vertical}
+  .hint{font-size:12px;opacity:.7;margin-top:4px}
+  .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+  .btn{
+    appearance:none; border:none; border-radius:12px; padding:11px 14px; cursor:pointer; font-weight:700;
+    color:#0f1020; background:linear-gradient(90deg,#7c6bff,#5ce0b5); box-shadow:0 8px 24px rgba(92,224,181,.25),0 3px 8px rgba(124,107,255,.25);
+  }
+  .btn.ghost{background:transparent;color:#e9ecf6;border:1px solid rgba(255,255,255,.22)}
+  .out{margin-top:16px}
+  pre{white-space:pre-wrap;word-break:break-word;background:rgba(0,0,0,.35);border:1px dashed rgba(255,255,255,.2);
+      padding:12px;border-radius:12px}
+  .ok{color:#b4ffd8}
+  .warn{color:#ffdca8}
+
+  /* светлячки */
+  .fireflies{position:fixed;inset:0;pointer-events:none;overflow:hidden}
+  .fireflies span{
+    position:absolute; width:6px; height:6px; border-radius:50%;
+    background:radial-gradient(circle,#d4ffe9 0%, rgba(212,255,233,.2) 60%, transparent 70%);
+    box-shadow:0 0 12px 4px rgba(140,255,214,.55), 0 0 26px 10px rgba(124,107,255,.22);
+    animation:fly linear infinite, twinkle 2.6s ease-in-out infinite;
+    opacity:.8; filter: drop-shadow(0 0 4px #7c6bff);
+  }
+  @keyframes twinkle {50%{transform:scale(1.35)}}
+  @keyframes fly {
+    0%{ transform: translate3d(var(--x0), var(--y0),0) }
+    100%{ transform: translate3d(var(--x1), var(--y1),0) }
+  }
+
+  /* маленькие неоновые заголовки */
+  .mini{font-weight:800; font-size:12px; letter-spacing:.12em; text-transform:uppercase; color:#bcb6ff; margin:8px 0 4px}
+  .switch{display:flex;align-items:center;gap:10px}
+  .switch input{width:18px;height:18px}
+  .pill{background:rgba(124,107,255,.15);border:1px solid rgba(124,107,255,.35);padding:.25rem .6rem;border-radius:999px;font-size:12px}
 </style>
 </head>
 <body>
+<div class="fireflies" id="fx"></div>
+
 <div class="wrap">
-  <h1>Собрать iframe для книги</h1>
+  <h1>Живая Книга <span class="tw">Teachy Witchy</span></h1>
 
-  <label>Ссылки на изображения (по одной в строке; первая — обложка, последняя — задняя)</label>
-  <textarea id="urls" rows="8" placeholder="https://.../page-01.png
+  <div class="card" style="margin-bottom:16px">
+    <div class="mini">1) Изображения страниц</div>
+    <label>Ссылки (каждая с новой строки, обложка — первая, задник — последняя)</label>
+    <textarea id="urls" placeholder="https://.../page-01.png
 https://.../page-02.png
-..."></textarea>
+https://.../page-03.png"></textarea>
 
-  <div class="row">
-    <div class="cell">
-      <label>Ширина ОДНОЙ страницы, px</label>
-      <input id="w" type="number" value="600" class="mono">
+    <div class="row" style="margin-top:10px">
+      <div>
+        <div class="mini">2) Размер одной страницы (px)</div>
+        <div class="grid-3">
+          <div><label>Ширина (w)</label><input id="w" type="number" value="600" min="200" step="1"/></div>
+          <div><label>Высота (h)</label><input id="h" type="number" value="900" min="200" step="1"/></div>
+          <div>
+            <label>&nbsp;</label>
+            <button class="btn ghost" id="safeBtn" type="button" title="Подогнать к безопасному размеру с сохранением пропорций">Сделать безопасным</button>
+          </div>
+        </div>
+        <div class="hint">Безопасно: ширина книги (2×w) ≤ <b>1800</b>, h ≤ <b>1200</b>. Формат сохраняется.</div>
+      </div>
+      <div>
+        <div class="mini">3) Анимация и звук</div>
+        <label>Скорость перелистывания, мс</label>
+        <input id="flip" type="number" value="800" min="200" step="50"/>
+        <div class="switch" style="margin-top:10px">
+          <input id="sound" type="checkbox" checked/>
+          <label for="sound">Воспроизводить звук перелистывания</label>
+        </div>
+        <div class="switch" style="margin-top:6px">
+          <input id="hint" type="checkbox"/>
+          <label for="hint">Показывать подсказки «листай» в виджете</label>
+        </div>
+      </div>
     </div>
-    <div class="cell">
-      <label>Высота страницы, px</label>
-      <input id="h" type="number" value="900" class="mono">
+
+    <div class="actions">
+      <button class="btn" id="gen" type="button">Сгенерировать ссылку + iframe</button>
+      <span id="status" class="pill">Готово к генерации</span>
     </div>
-    <div class="cell">
-      <label>Скорость перелистывания, мс</label>
-      <input id="flip" type="number" value="800" class="mono">
+
+    <div class="out">
+      <div class="mini">Ссылка для открытия</div>
+      <pre id="linkBox"></pre>
+      <div class="mini">iframe для Genially (кликабельно)</div>
+      <pre id="iframeBox"></pre>
     </div>
   </div>
 
-  <div class="row">
-    <div class="cell">
-      <label><input id="cache" type="checkbox" checked> Пробивать кэш (добавлять <span class="mono">v</span>)</label>
-      <span class="help">Если Genially/браузер упорно показывает старую версию — оставь включенным.</span>
-    </div>
-    <div class="cell">
-      <label><input id="scroll" type="checkbox" checked> Отключить скролл iframe</label>
-      <span class="help">Ставит <span class="mono">scrolling="no"</span>.</span>
-    </div>
-    <div class="cell">
-      <label><input id="hint" type="checkbox"> Показывать подсказку «щёлкните»</label>
-      <span class="help">У нас по умолчанию скрыта.</span>
-    </div>
-  </div>
-
-  <button id="build">Сгенерировать iframe</button>
-
-  <div class="out">
-    <label>Готовый iframe (вставляй в Genially как «вставка → другой»)</label>
-    <textarea id="iframe" rows="6" class="mono" readonly></textarea>
-    <div class="help">Если Genially сам подменяет & на &amp; — это нормально при отображении в редакторе. Главное, чтобы в DOM было как ниже.</div>
-  </div>
+  <div class="hint">Подсказка: если Genially вдруг не ловит клики, уменьши <b>w/h</b> кнопкой «Сделать безопасным» — это сохранит формат страницы и держит книгу в надёжном размере.</div>
 </div>
 
 <script>
-  function onceEncode(url){ return encodeURIComponent(url); }   // ВАЖНО: кодируем КАЖДУЮ ссылку РОВНО ОДИН РАЗ
-  function build(){
-    const raw = document.getElementById('urls').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-    if(!raw.length){ document.getElementById('iframe').value = '— добавьте ссылки —'; return; }
-
-    const w   = Math.max(1, parseInt(document.getElementById('w').value,10) || 600);
-    const h   = Math.max(1, parseInt(document.getElementById('h').value,10) || 900);
-    const flip= Math.max(1, parseInt(document.getElementById('flip').value,10) || 800);
-    const v   = document.getElementById('cache').checked ? (Date.now().toString(36)) : null;
-    const showHint = document.getElementById('hint').checked ? 'true' : 'false';
-    const scrolling = document.getElementById('scroll').checked ? 'no' : 'auto';
-
-    // imgs= url1|url2|...  (каждая часть кодирована один раз)
-    const imgsParam = raw.map(onceEncode).join('|');
-
-    const src =
-      'https://nikashum93.github.io/bookflip/viewer.html'
-      + '?imgs=' + imgsParam
-      + '&w=' + w
-      + '&h=' + h
-      + '&flipTime=' + flip
-      + '&showHint=' + showHint
-      + (v ? ('&v=' + v) : '');
-
-    const iframe =
-      '<iframe src="' + src + '"'
-      + ' width="' + (w*2) + '" height="' + h + '"'
-      + ' style="border:0;overflow:hidden;background:transparent"'
-      + ' allow="autoplay" scrolling="' + scrolling + '"></iframe>';
-
-    document.getElementById('iframe').value = iframe;
+/* ===== светлячки ===== */
+(function fireflies(){
+  const fx = document.getElementById('fx');
+  const N = 28;
+  for(let i=0;i<N;i++){
+    const s = document.createElement('span');
+    const x0 = Math.random()*100|0, y0 = Math.random()*100|0;
+    const x1 = (x0 + (Math.random()*60-30))|0;
+    const y1 = (y0 + (Math.random()*40-20))|0;
+    s.style.setProperty('--x0', x0+'vw');
+    s.style.setProperty('--y0', y0+'vh');
+    s.style.setProperty('--x1', x1+'vw');
+    s.style.setProperty('--y1', y1+'vh');
+    s.style.animationDuration = (18+Math.random()*16).toFixed(1)+'s';
+    s.style.animationDelay = (-Math.random()*18).toFixed(1)+'s';
+    fx.appendChild(s);
   }
-  document.getElementById('build').addEventListener('click', build);
+})();
+
+/* ===== редактор ===== */
+const MAX_BOOK_W = 1800;  // две страницы вместе
+const MAX_H       = 1200; // высота одной страницы
+const urlsEl = document.getElementById('urls');
+const wEl    = document.getElementById('w');
+const hEl    = document.getElementById('h');
+const flipEl = document.getElementById('flip');
+const soundEl= document.getElementById('sound');
+const hintEl = document.getElementById('hint');
+const statusEl=document.getElementById('status');
+
+function safeResize(){
+  let w = Math.max(1, parseInt(wEl.value||'0',10));
+  let h = Math.max(1, parseInt(hEl.value||'0',10));
+
+  const bookW = 2*w;
+  if (bookW<=MAX_BOOK_W && h<=MAX_H){
+    statusEl.textContent = 'Размер уже безопасный';
+    statusEl.style.background = 'rgba(92,224,181,.18)';
+    statusEl.style.border = '1px solid rgba(92,224,181,.4)';
+    return;
+  }
+  const scale = Math.min(MAX_BOOK_W/(2*w), MAX_H/h);
+  const nw = Math.floor(w*scale);
+  const nh = Math.floor(h*scale);
+
+  wEl.value = nw;
+  hEl.value = nh;
+
+  statusEl.textContent = `Сжали до ${nw}×${nh} (формат сохранён)`;
+  statusEl.style.background = 'rgba(92,224,181,.18)';
+  statusEl.style.border = '1px solid rgba(92,224,181,.4)';
+}
+
+document.getElementById('safeBtn').addEventListener('click', safeResize);
+
+function singleEncode(url){
+  // нормализуем возможные двойные кодирования
+  try{
+    const once = decodeURIComponent(url);
+    // если decode не сломал URL — вернём его снова закодированным
+    return encodeURIComponent(once);
+  }catch{
+    return encodeURIComponent(url);
+  }
+}
+
+function gen(){
+  const raw = urlsEl.value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  if(!raw.length){ alert('Добавь хотя бы одну ссылку на изображение.'); return; }
+
+  const imgsParam = raw.map(singleEncode).join('|'); // удобно и для людей, и для Genially
+  const w = parseInt(wEl.value,10)||600;
+  const h = parseInt(hEl.value,10)||900;
+  const flip = Math.max(200, parseInt(flipEl.value,10)||800);
+  const sound = soundEl.checked ? 1 : 0;
+  const showHint = hintEl.checked ? 'true' : 'false';
+  const v = Date.now(); // пробиваем кэш
+
+  const base = 'https://nikashum93.github.io/bookflip/viewer.html';
+  const q = `?imgs=${imgsParam}&w=${w}&h=${h}&flipTime=${flip}&showHint=${showHint}&sound=${sound}&v=${v}`;
+  const link = base + q;
+
+  const iframe = `<iframe src="${link}" width="${2*w}" height="${h}" style="border:0;overflow:hidden;background:transparent" allow="autoplay" scrolling="no"></iframe>`;
+
+  document.getElementById('linkBox').textContent = link;
+  document.getElementById('iframeBox').textContent = iframe;
+
+  // статус
+  const bookW = 2*w;
+  if (bookW>MAX_BOOK_W || h>MAX_H){
+    statusEl.textContent = `⚠️ крупновато (${bookW}×${h}). Лучше нажать «Сделать безопасным».`;
+    statusEl.classList.remove('ok'); statusEl.classList.add('warn');
+    statusEl.style.background = 'rgba(255,204,160,.12)';
+    statusEl.style.border = '1px solid rgba(255,204,160,.35)';
+  }else{
+    statusEl.textContent = '✅ Готово! Размер безопасный.';
+    statusEl.classList.remove('warn'); statusEl.classList.add('ok');
+    statusEl.style.background = 'rgba(92,224,181,.18)';
+    statusEl.style.border = '1px solid rgba(92,224,181,.45)';
+  }
+}
+document.getElementById('gen').addEventListener('click', gen);
 </script>
 </body>
 </html>
