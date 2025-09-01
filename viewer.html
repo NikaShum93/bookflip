@@ -8,8 +8,8 @@
 <style>
   html,body{margin:0;height:100%;background:transparent;overflow:hidden}
   .scene{position:relative;width:100%;height:100%;background:transparent;display:flex;align-items:center;justify-content:center}
-  .book-frame{position:relative;transform-origin:center center;will-change:transform}
-  #book{width:100%;height:100%;background:transparent}
+  .book-frame{position:relative;transform-origin:center center;will-change:transform;pointer-events:auto}
+  #book{width:100%;height:100%;background:transparent;pointer-events:auto}
 
   /* сброс библиотечных теней */
   .stf__wrapper,.stf__block,.stf__item,.stf__page,.stf__content{
@@ -70,42 +70,4 @@
   </div>
 
   <audio id="flipSound" preload="auto" src="https://raw.githubusercontent.com/NikaShum93/bookflip/main/flip.mp3"></audio>
-  <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.min.js"></script>
-  <script>
-  (function(){
-    const qs = new URLSearchParams(location.search);
-    const urls = (qs.get('imgs')||'')
-      .split(/[|,]/).map(s=>s.trim()).filter(Boolean)
-      .map(s=>{try{return decodeURIComponent(s)}catch{return s}});
-    if (!urls.length) return err('Пустой imgs — нет изображений.');
-
-    const flipTime = +qs.get('flipTime') > 0 ? +qs.get('flipTime') : 800;
-
-    let pageW = parseInt(qs.get('w'),10) || 600;
-    let pageH = parseInt(qs.get('h'),10) || 900;
-
-    // НОВОЕ: виртуальный отступ (px) и минимальный масштаб
-    const pad = parseInt(qs.get('pad'), 10) || 0;
-    const MIN_SCALE = 0.3;
-
-    const scene  = document.getElementById('scene');
-    const frame  = document.getElementById('frame');
-    const bookEl = document.getElementById('book');
-
-    function setFrameSize(){
-      frame.style.width  = (pageW * 2) + 'px';
-      frame.style.height = pageH + 'px';
-      fitToScene();
-    }
-    function fitToScene(){
-      const availW = scene.clientWidth;
-      const availH = scene.clientHeight;
-
-      // «ужимаем» доступную область на pad со всех сторон (без реального padding)
-      const innerW = Math.max(0, availW - pad*2);
-      const innerH = Math.max(0, availH - pad*2);
-
-      const needW  = pageW * 2;
-      const needH  = pageH;
-
-      let scale  = Math.min(i
+  <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.
