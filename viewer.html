@@ -84,6 +84,10 @@
     let pageW = parseInt(qs.get('w'),10) || 600;
     let pageH = parseInt(qs.get('h'),10) || 900;
 
+    // НОВОЕ: виртуальный отступ (px) и минимальный масштаб
+    const pad = parseInt(qs.get('pad'), 10) || 0;
+    const MIN_SCALE = 0.3;
+
     const scene  = document.getElementById('scene');
     const frame  = document.getElementById('frame');
     const bookEl = document.getElementById('book');
@@ -96,72 +100,12 @@
     function fitToScene(){
       const availW = scene.clientWidth;
       const availH = scene.clientHeight;
+
+      // «ужимаем» доступную область на pad со всех сторон (без реального padding)
+      const innerW = Math.max(0, availW - pad*2);
+      const innerH = Math.max(0, availH - pad*2);
+
       const needW  = pageW * 2;
       const needH  = pageH;
-      const scale  = Math.min(availW / needW, availH / needH);
-      frame.style.transform = 'scale(' + scale + ')';
-    }
-    setFrameSize();
-    window.addEventListener('resize', fitToScene);
 
-    const pf = new St.PageFlip(bookEl, {
-      width: pageW,
-      height: pageH,
-      size: 'fixed',
-      autoSize: false,
-      showCover: true,
-      usePortrait: false,
-      flippingTime: flipTime,
-      maxShadowOpacity: 0.85,
-      drawShadow: true,
-      mobileScrollSupport: true,
-      useMouseEvents: true,
-      clickEventForward: false,
-      showHint: false
-    });
-
-    const host = document.createElement('div');
-    urls.forEach((src,i)=>{
-      const p = document.createElement('div'); p.className='page';
-      p.setAttribute('data-density', (i===0 || i===urls.length-1) ? 'hard' : 'soft');
-      const img = document.createElement('img'); img.src = src; img.alt='';
-      p.appendChild(img); host.appendChild(p);
-    });
-    const nodes = host.querySelectorAll('.page');
-    if (typeof pf.loadFromHTML === 'function') pf.loadFromHTML(nodes);
-    else pf.loadFromImages(urls);
-
-    function syncSingle(){
-      const idx = pf.getCurrentPageIndex();
-      frame.classList.toggle('single', (idx===0 || idx===urls.length-1));
-    }
-    syncSingle(); pf.on('flip', syncSingle);
-
-    const flipSound = document.getElementById('flipSound');
-    pf.on('flip', ()=>{ try{ flipSound.currentTime=0; flipSound.play(); }catch(e){} });
-
-    let lock=false;
-    function safeFlip(dir){
-      if (lock || pf.isFlipping()) return;
-      lock = true;
-      if (dir==='prev') pf.flipPrev('top'); else pf.flipNext('top');
-      setTimeout(()=>{ lock=false; }, pf.getSettings().flippingTime + 40);
-    }
-    scene.addEventListener('click', (e)=>{
-      const r = scene.getBoundingClientRect();
-      const x = e.clientX - r.left;
-      safeFlip(x < r.width/2 ? 'prev' : 'next');
-    });
-    window.addEventListener('keydown', (e)=>{
-      if (e.key==='ArrowLeft')  safeFlip('prev');
-      if (e.key==='ArrowRight') safeFlip('next');
-    });
-
-    function err(msg){
-      const o=document.getElementById('ovl'), m=document.getElementById('ovlMsg');
-      m.textContent=msg; o.classList.add('show');
-    }
-  })();
-  </script>
-</body>
-</html>
+      let scale  = Math.min(i
