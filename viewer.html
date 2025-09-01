@@ -8,11 +8,6 @@
 <style>
   html,body{margin:0;height:100%;background:transparent;overflow:hidden}
   .scene{position:relative;width:100%;height:100%;background:transparent;display:flex;align-items:center;justify-content:center}
-
-  /* ▼ добавлено: прокладка-«воздух» */
-  :root{--padX:0px;--padY:0px}
-  .pad{position:relative;width:100%;height:100%;padding:var(--padY) var(--padX);box-sizing:content-box;overflow:visible}
-
   .book-frame{position:relative;transform-origin:center center;will-change:transform}
   #book{width:100%;height:100%;background:transparent}
 
@@ -32,8 +27,12 @@
   .stf__item--left::after, .stf__item--right::after{
     content:""; position:absolute; inset:0; pointer-events:none; mix-blend-mode:multiply;
   }
-  .stf__item--left::after{  background:linear-gradient(90deg, rgba(0,0,0,.22) 0%, rgba(0,0,0,0) 14%); }
-  .stf__item--right::after{ background:linear-gradient(270deg, rgba(0,0,0,.22) 0%, rgba(0,0,0,0) 14%); }
+  .stf__item--left::after{
+    background:linear-gradient(90deg, rgba(0,0,0,.22) 0%, rgba(0,0,0,0) 14%);
+  }
+  .stf__item--right::after{
+    background:linear-gradient(270deg, rgba(0,0,0,.22) 0%, rgba(0,0,0,0) 14%);
+  }
 
   /* внутренняя тень у корешка */
   .stf__item--left::before, .stf__item--right::before{
@@ -63,11 +62,8 @@
 </head>
 <body>
   <div id="scene" class="scene">
-    <!-- ▼ добавлено: обёртка с воздухом -->
-    <div id="pad" class="pad">
-      <div id="frame" class="book-frame">
-        <div id="book"></div>
-      </div>
+    <div id="frame" class="book-frame">
+      <div id="book"></div>
     </div>
     <div id="ovl" class="overlay"><div class="panel" id="ovlMsg">Ошибка</div></div>
   </div>
@@ -76,7 +72,7 @@
   <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.min.js"></script>
   <script>
   (function(){
-    // ====== robust imgs decoding (до 3 раз) ======
+    /* ====== robust imgs decoding (до 3 раз) ====== */
     function multiDecode(s, times=3){
       let prev=s, curr=s;
       for (let i=0;i<times;i++){
@@ -107,32 +103,34 @@
     let pageH = parseInt(qs.get('h'),10) || 900;
 
     const scene  = document.getElementById('scene');
-    const padBox = document.getElementById('pad');   // обёртка-воздух
     const frame  = document.getElementById('frame');
     const bookEl = document.getElementById('book');
 
+    // Размер "коробки" книги (2*w × h)
     function setFrameSize(){
       frame.style.width  = (pageW * 2) + 'px';
       frame.style.height = pageH + 'px';
-
-      // ▼ единственное нововведение: расчёт воздуха
-      const padX = Math.round(pageW * 0.16); // ~16% от ширины страницы
-      const padY = Math.round(pageH * 0.22); // ~22% от высоты
-      padBox.style.setProperty('--padX', padX + 'px');
-      padBox.style.setProperty('--padY', padY + 'px');
-
-      fitToScene(padX, padY);
+      fitToScene();
     }
-    function fitToScene(padX=0, padY=0){
+
+    // «Воздух» только в расчёте масштаба (ничего не двигаем и не добавляем в DOM)
+    function fitToScene(){
       const availW = scene.clientWidth;
       const availH = scene.clientHeight;
+
+      // запас под анимацию: ~16% по горизонтали, ~22% по вертикали от одной страницы
+      const padX = Math.round(pageW * 0.16);
+      const padY = Math.round(pageH * 0.22);
+
       const needW  = pageW * 2 + padX * 2;
       const needH  = pageH + padY * 2;
+
       const scale  = Math.min(availW / needW, availH / needH);
       frame.style.transform = 'scale(' + scale + ')';
     }
+
     setFrameSize();
-    window.addEventListener('resize', setFrameSize, {passive:true});
+    window.addEventListener('resize', fitToScene);
 
     const pf = new St.PageFlip(bookEl, {
       width: pageW,
@@ -168,7 +166,7 @@
     syncSingle(); pf.on('flip', syncSingle);
 
     const flipSound = document.getElementById('flipSound');
-    const soundOn = (qs.get('sound')!=='0'); // по умолчанию включён; editor может передать sound=0
+    const soundOn = (qs.get('sound')!=='0'); // по умолчанию звук включён; editor может передать sound=0
     pf.on('flip', ()=>{ if(soundOn){ try{ flipSound.currentTime=0; flipSound.play(); }catch(e){} } });
 
     let lock=false;
